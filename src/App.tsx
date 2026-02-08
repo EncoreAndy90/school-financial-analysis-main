@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   LineChart,
   Line,
@@ -61,6 +61,9 @@ import {
   saveScenarios,
 } from './utils/scenarios'
 import type { Scenario, ScenarioState } from './utils/scenarios'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import html2canvas from 'html2canvas'
 
 interface FinancialData {
   year: string
@@ -177,6 +180,10 @@ function App() {
   const [scenarioName, setScenarioName] = useState('')
   const [scenarios, setScenarios] = useState<Scenario[]>(() => loadScenarios())
   const [selectedScenarioId, setSelectedScenarioId] = useState('')
+  const [includeChartsInExport, setIncludeChartsInExport] = useState(true)
+  const turnoverChartRef = useRef<HTMLDivElement | null>(null)
+  const surplusChartRef = useRef<HTMLDivElement | null>(null)
+  const breakdownChartRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     saveScenarios(scenarios)
@@ -394,6 +401,116 @@ function App() {
     if (scenarioName === scenarioToDelete?.name) {
       setScenarioName('')
     }
+  }
+
+  const handleExportPdf = async () => {
+    const doc = new jsPDF()
+    const title = scenarioName.trim() ? `Scenario: ${scenarioName.trim()}` : 'School Financial Analysis'
+    const exportDate = new Date().toLocaleDateString('en-GB')
+
+    doc.setFontSize(16)
+    doc.text(title, 14, 18)
+    doc.setFontSize(10)
+    doc.text(`Exported: ${exportDate}`, 14, 24)
+
+    const assumptions = [
+      `Discount Effect: ${formatNumber(calculatedDiscountEffect)}%`,
+      `Students: ${
+        useStudentsByYear
+          ? `Y1 ${formatNumber(numChildrenYear1)} / Y2 ${formatNumber(numChildrenYear2)} / Y3 ${formatNumber(numChildrenYear3)}`
+          : formatNumber(numChildren)
+      }`,
+      `Fee per Term: ${
+        useFeePerTermByYear
+          ? `Y1 £${formatNumber(feePerTermYear1)} / Y2 £${formatNumber(feePerTermYear2)} / Y3 £${formatNumber(feePerTermYear3)}`
+          : `£${formatNumber(feePerTerm)}`
+      }`,
+      `Fee Increase: ${
+        useFeeIncreaseByYear
+          ? `Y1 ${formatNumber(feeIncreaseYear1)}% / Y2 ${formatNumber(feeIncreaseYear2)}% / Y3 ${formatNumber(feeIncreaseYear3)}%`
+          : `${formatNumber(feeIncrease)}%`
+      }`,
+      `Pay Increase: ${
+        usePayIncreaseByYear
+          ? `Y1 ${formatNumber(payIncreaseYear1)}% / Y2 ${formatNumber(payIncreaseYear2)}% / Y3 ${formatNumber(payIncreaseYear3)}%`
+          : `${formatNumber(payIncrease)}%`
+      }`,
+      `Staff Costs: ${
+        useDetailedStaffCosts
+          ? (useStaffByYear ? 'Detailed (per year salaries & headcount)' : 'Detailed (salary × headcount)')
+          : `Share ${formatNumber(staffCostShare)}%`
+      }`,
+      `Inflation: Y1 ${formatNumber(inflationYear1)}% / Y2 ${formatNumber(inflationYear2)}% / Y3 ${formatNumber(inflationYear3)}%`,
+    ]
+
+    doc.setFontSize(12)
+    doc.text('Assumptions Snapshot', 14, 34)
+    doc.setFontSize(10)
+    assumptions.forEach((line, index) => {
+      doc.text(line, 14, 40 + index * 5)
+    })
+
+    const tableStartY = 40 + assumptions.length * 5 + 4
+    autoTable(doc, {
+      startY: tableStartY,
+      head: [[
+        'Year',
+        'Gross Revenue',
+        'Discounts',
+        'Turnover',
+        'Costs',
+        'Surplus',
+        'Fee %',
+        'Pay %',
+      ]],
+      body: financialData.map((row) => ([
+        row.year,
+        formatCurrency(row.grossRevenue),
+        formatCurrency(-row.discountAmount),
+        formatCurrency(row.revenue),
+        formatCurrency(row.costs),
+        formatCurrency(row.netPosition),
+        row.feeIncrease ? `${row.feeIncrease}%` : '-',
+        row.payIncrease ? `${row.payIncrease}%` : '-',
+      ])),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [25, 118, 210] },
+    })
+
+    if (includeChartsInExport) {
+      const chartRefs = [
+        { ref: turnoverChartRef, title: 'Turnover vs Costs' },
+        { ref: surplusChartRef, title: 'Surplus Over Time' },
+        { ref: breakdownChartRef, title: 'Revenue Breakdown' },
+      ]
+
+      let currentY = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? tableStartY
+      for (const chart of chartRefs) {
+        if (!chart.ref.current) {
+          continue
+        }
+
+        const canvas = await html2canvas(chart.ref.current, { backgroundColor: '#ffffff', scale: 2 })
+        const imageData = canvas.toDataURL('image/png')
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const margin = 14
+        const maxWidth = pageWidth - margin * 2
+        const imageHeight = (canvas.height * maxWidth) / canvas.width
+        const neededSpace = imageHeight + 12
+
+        if (currentY + neededSpace > doc.internal.pageSize.getHeight() - margin) {
+          doc.addPage()
+          currentY = margin
+        }
+
+        doc.setFontSize(12)
+        doc.text(chart.title, margin, currentY + 6)
+        doc.addImage(imageData, 'PNG', margin, currentY + 10, maxWidth, imageHeight)
+        currentY += imageHeight + 18
+      }
+    }
+
+    doc.save('school-financial-analysis.pdf')
   }
 
   const currentStudentCount = childrenByYear[0]
@@ -1416,6 +1533,29 @@ function App() {
                         </Stack>
                       </AccordionDetails>
                     </Accordion>
+
+                    <Accordion defaultExpanded={false}>
+                      <AccordionSummary expandIcon={<ExpandMore />}>
+                        <Typography>Export</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Stack spacing={2}>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={includeChartsInExport}
+                                onChange={(e) => setIncludeChartsInExport(e.target.checked)}
+                                color="primary"
+                              />
+                            }
+                            label="Include charts in PDF"
+                          />
+                          <Button variant="outlined" onClick={handleExportPdf}>
+                            Export PDF
+                          </Button>
+                        </Stack>
+                      </AccordionDetails>
+                    </Accordion>
                   </Stack>
                 </CardContent>
               </Card>
@@ -1608,7 +1748,8 @@ function App() {
                       <Typography variant="h6" gutterBottom>
                         Turnover vs Costs Over Time
                       </Typography>
-                      <ResponsiveContainer width="100%" height={300}>
+                      <Box ref={turnoverChartRef}>
+                        <ResponsiveContainer width="100%" height={300}>
                         <LineChart data={financialData}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="year" />
@@ -1630,7 +1771,8 @@ function App() {
                             name="Costs"
                           />
                         </LineChart>
-                      </ResponsiveContainer>
+                        </ResponsiveContainer>
+                      </Box>
                     </CardContent>
                   </Card>
 
@@ -1639,23 +1781,25 @@ function App() {
                       <Typography variant="h6" gutterBottom>
                         Surplus Over Time
                       </Typography>
-                      <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={financialData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="year" />
-                          <YAxis tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
-                          <Tooltip formatter={(value) => formatTooltipValue(value)} />
-                          <Legend />
-                          <Bar dataKey="netPosition" name="Surplus">
-                            {financialData.map((entry, index) => (
-                              <Cell
-                                key={`cell-${index}`}
-                                fill={entry.netPosition < 0 ? '#d32f2f' : '#1976d2'}
-                              />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <Box ref={surplusChartRef}>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <BarChart data={financialData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="year" />
+                            <YAxis tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
+                            <Tooltip formatter={(value) => formatTooltipValue(value)} />
+                            <Legend />
+                            <Bar dataKey="netPosition" name="Surplus">
+                              {financialData.map((entry, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={entry.netPosition < 0 ? '#d32f2f' : '#1976d2'}
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Box>
                     </CardContent>
                   </Card>
 
@@ -1664,17 +1808,19 @@ function App() {
                       <Typography variant="h6" gutterBottom>
                         Revenue Breakdown
                       </Typography>
-                      <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={financialData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="year" />
-                          <YAxis tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
-                          <Tooltip formatter={(value) => formatTooltipValue(value)} />
-                          <Legend />
-                          <Bar dataKey="revenue" fill="#2e7d32" name="Turnover" />
-                          <Bar dataKey="costs" fill="#d32f2f" name="Costs" />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <Box ref={breakdownChartRef}>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <BarChart data={financialData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="year" />
+                            <YAxis tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
+                            <Tooltip formatter={(value) => formatTooltipValue(value)} />
+                            <Legend />
+                            <Bar dataKey="revenue" fill="#2e7d32" name="Turnover" />
+                            <Bar dataKey="costs" fill="#d32f2f" name="Costs" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Box>
                     </CardContent>
                   </Card>
                 </Stack>
