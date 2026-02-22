@@ -52,6 +52,8 @@ import {
   School,
   AttachMoney,
   ExpandMore,
+  DarkMode,
+  LightMode,
 } from '@mui/icons-material'
 import './App.css'
 import {
@@ -79,59 +81,25 @@ interface FinancialData {
   nonStaffCosts: number
 }
 
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-      light: '#42a5f5',
-      dark: '#1565c0',
-    },
-    secondary: {
-      main: '#9c27b0',
-      light: '#ba68c8',
-      dark: '#7b1fa2',
-    },
-    success: {
-      main: '#2e7d32',
-      light: '#4caf50',
-    },
-    error: {
-      main: '#d32f2f',
-      light: '#ef5350',
-    },
-    background: {
-      default: '#f5f5f5',
-      paper: '#ffffff',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h4: {
-      fontWeight: 600,
-    },
-    h5: {
-      fontWeight: 600,
-    },
-    h6: {
-      fontWeight: 600,
-    },
-  },
-  shape: {
-    borderRadius: 12,
-  },
-  components: {
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        },
-      },
-    },
-  },
-})
+type ThemeMode = 'light' | 'dark'
+
+const THEME_MODE_STORAGE_KEY = 'school-financial-analysis-theme-mode'
+
+const getInitialThemeMode = (): ThemeMode => {
+  if (typeof window === 'undefined') {
+    return 'light'
+  }
+
+  const storedThemeMode = window.localStorage.getItem(THEME_MODE_STORAGE_KEY)
+  if (storedThemeMode === 'light' || storedThemeMode === 'dark') {
+    return storedThemeMode
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
 
 function App() {
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode)
   // Input states
   const [numChildren, setNumChildren] = useState(200)
   const [useStudentsByYear, setUseStudentsByYear] = useState(false)
@@ -186,9 +154,85 @@ function App() {
   const surplusChartRef = useRef<HTMLDivElement | null>(null)
   const breakdownChartRef = useRef<HTMLDivElement | null>(null)
 
+  const theme = useMemo(
+    () => createTheme({
+      palette: {
+        mode: themeMode,
+        primary: {
+          main: '#1976d2',
+          light: '#42a5f5',
+          dark: '#1565c0',
+        },
+        secondary: {
+          main: '#9c27b0',
+          light: '#ba68c8',
+          dark: '#7b1fa2',
+        },
+        success: {
+          main: '#2e7d32',
+          light: '#4caf50',
+        },
+        error: {
+          main: '#d32f2f',
+          light: '#ef5350',
+        },
+        background: themeMode === 'dark'
+          ? {
+              default: '#0f172a',
+              paper: '#111827',
+            }
+          : {
+              default: '#f5f5f5',
+              paper: '#ffffff',
+            },
+      },
+      typography: {
+        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+        h4: {
+          fontWeight: 600,
+        },
+        h5: {
+          fontWeight: 600,
+        },
+        h6: {
+          fontWeight: 600,
+        },
+      },
+      shape: {
+        borderRadius: 12,
+      },
+      components: {
+        MuiCard: {
+          styleOverrides: {
+            root: {
+              boxShadow: themeMode === 'dark'
+                ? '0 4px 14px rgba(0,0,0,0.45)'
+                : '0 2px 8px rgba(0,0,0,0.1)',
+            },
+          },
+        },
+      },
+    }),
+    [themeMode],
+  )
+
+  const chartAxisColor = theme.palette.text.secondary
+  const chartGridColor = theme.palette.mode === 'dark' ? 'rgba(148, 163, 184, 0.25)' : 'rgba(15, 23, 42, 0.14)'
+  const chartTooltipContentStyle = {
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: 8,
+  }
+  const chartTooltipLabelStyle = { color: theme.palette.text.primary }
+  const chartTooltipItemStyle = { color: theme.palette.text.primary }
+
   useEffect(() => {
     saveScenarios(scenarios)
   }, [scenarios])
+
+  useEffect(() => {
+    window.localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode)
+  }, [themeMode])
 
   const calculatedDiscountEffect = useMemo(() => {
     const totalChildren = useStudentsByYear ? numChildrenYear1 : numChildren
@@ -212,6 +256,18 @@ function App() {
       ? [feePerTermYear1, feePerTermYear2, feePerTermYear3]
       : [feePerTerm, feePerTerm, feePerTerm]
   }, [useFeePerTermByYear, feePerTerm, feePerTermYear1, feePerTermYear2, feePerTermYear3])
+
+  const projectedFeePerTermByYear = useMemo(() => {
+    if (useFeePerTermByYear) {
+      return [feePerTermYear1, feePerTermYear2, feePerTermYear3]
+    }
+
+    const year1 = feePerTerm * (1 + feeIncreaseByYear[0] / 100)
+    const year2 = year1 * (1 + feeIncreaseByYear[1] / 100)
+    const year3 = year2 * (1 + feeIncreaseByYear[2] / 100)
+
+    return [year1, year2, year3]
+  }, [useFeePerTermByYear, feePerTerm, feePerTermYear1, feePerTermYear2, feePerTermYear3, feeIncreaseByYear])
 
   const payIncreaseByYear = useMemo(() => {
     return usePayIncreaseByYear
@@ -427,6 +483,167 @@ function App() {
     setInflationYear3(state.inflationYear3)
   }
 
+  const presetOptions: Array<{
+    id: string
+    label: string
+    description: string
+    overrides: Partial<ScenarioState>
+  }> = [
+    {
+      id: 'baseline',
+      label: 'Baseline',
+      description: 'Steady enrollment with moderate increases.',
+      overrides: {
+        useStudentsByYear: false,
+        numChildren: 200,
+        useFeePerTermByYear: false,
+        feePerTerm: 7000,
+        useFeeIncreaseByYear: false,
+        feeIncrease: 3,
+        usePayIncreaseByYear: false,
+        payIncrease: 2,
+        currentSurplus: 100000,
+        numStaffChildren: 0,
+        otherChildrenDiscount: 15,
+        useDetailedStaffCosts: false,
+        staffCostShare: 70,
+        inflationYear1: 2.5,
+        inflationYear2: 2.3,
+        inflationYear3: 2.2,
+      },
+    },
+    {
+      id: 'growth',
+      label: 'Growth',
+      description: 'Enrollment and fee growth with controlled costs.',
+      overrides: {
+        useStudentsByYear: true,
+        numChildrenYear1: 220,
+        numChildrenYear2: 235,
+        numChildrenYear3: 250,
+        useFeePerTermByYear: true,
+        feePerTermYear1: 7200,
+        feePerTermYear2: 7550,
+        feePerTermYear3: 7900,
+        useFeeIncreaseByYear: true,
+        feeIncreaseYear1: 4.5,
+        feeIncreaseYear2: 4.5,
+        feeIncreaseYear3: 4.5,
+        usePayIncreaseByYear: true,
+        payIncreaseYear1: 2.5,
+        payIncreaseYear2: 2.7,
+        payIncreaseYear3: 2.9,
+        currentSurplus: 120000,
+        numStaffChildren: 4,
+        otherChildrenDiscount: 12,
+        useDetailedStaffCosts: true,
+        useStaffByYear: true,
+        numTeachersYear1: 52,
+        numTeachersYear2: 54,
+        numTeachersYear3: 56,
+        numSupportYear1: 22,
+        numSupportYear2: 23,
+        numSupportYear3: 24,
+        avgAnnualSalaryYear1: 36000,
+        avgAnnualSalaryYear2: 37100,
+        avgAnnualSalaryYear3: 38200,
+        avgSupportSalaryYear1: 26000,
+        avgSupportSalaryYear2: 26800,
+        avgSupportSalaryYear3: 27600,
+        inflationYear1: 2.4,
+        inflationYear2: 2.3,
+        inflationYear3: 2.2,
+      },
+    },
+    {
+      id: 'cost-pressure',
+      label: 'Cost Pressure',
+      description: 'Higher inflation and pay pressure with tighter surplus.',
+      overrides: {
+        useStudentsByYear: true,
+        numChildrenYear1: 200,
+        numChildrenYear2: 198,
+        numChildrenYear3: 195,
+        useFeePerTermByYear: false,
+        feePerTerm: 7000,
+        useFeeIncreaseByYear: true,
+        feeIncreaseYear1: 2.2,
+        feeIncreaseYear2: 2.3,
+        feeIncreaseYear3: 2.5,
+        usePayIncreaseByYear: true,
+        payIncreaseYear1: 4.2,
+        payIncreaseYear2: 4.0,
+        payIncreaseYear3: 3.8,
+        currentSurplus: 45000,
+        numStaffChildren: 8,
+        otherChildrenDiscount: 16,
+        useDetailedStaffCosts: false,
+        staffCostShare: 78,
+        inflationYear1: 5.2,
+        inflationYear2: 4.8,
+        inflationYear3: 4.2,
+      },
+    },
+    {
+      id: 'expansion',
+      label: 'Expansion',
+      description: 'Fast enrollment growth with additional staff hiring.',
+      overrides: {
+        useStudentsByYear: true,
+        numChildrenYear1: 210,
+        numChildrenYear2: 240,
+        numChildrenYear3: 270,
+        useFeePerTermByYear: true,
+        feePerTermYear1: 7000,
+        feePerTermYear2: 7350,
+        feePerTermYear3: 7700,
+        useFeeIncreaseByYear: true,
+        feeIncreaseYear1: 4.2,
+        feeIncreaseYear2: 4.6,
+        feeIncreaseYear3: 5.0,
+        usePayIncreaseByYear: true,
+        payIncreaseYear1: 2.8,
+        payIncreaseYear2: 3.0,
+        payIncreaseYear3: 3.2,
+        currentSurplus: 90000,
+        numStaffChildren: 3,
+        otherChildrenDiscount: 11,
+        useDetailedStaffCosts: true,
+        useStaffByYear: true,
+        numTeachersYear1: 54,
+        numTeachersYear2: 60,
+        numTeachersYear3: 66,
+        numSupportYear1: 23,
+        numSupportYear2: 26,
+        numSupportYear3: 30,
+        avgAnnualSalaryYear1: 35500,
+        avgAnnualSalaryYear2: 36600,
+        avgAnnualSalaryYear3: 37700,
+        avgSupportSalaryYear1: 25500,
+        avgSupportSalaryYear2: 26200,
+        avgSupportSalaryYear3: 27000,
+        inflationYear1: 3.0,
+        inflationYear2: 2.8,
+        inflationYear3: 2.6,
+      },
+    },
+  ]
+
+  const handleApplyPreset = (presetId: string) => {
+    const preset = presetOptions.find((item) => item.id === presetId)
+    if (!preset) {
+      return
+    }
+
+    const baseState = buildScenarioState()
+    applyScenarioState({
+      ...baseState,
+      ...preset.overrides,
+    })
+    setSelectedScenarioId('')
+    setScenarioName(preset.label)
+  }
+
   const handleLoadScenario = () => {
     if (!selectedScenarioId) {
       return
@@ -606,22 +823,25 @@ function App() {
 
     const assumptionsRows: Array<[string, string | number]> = [
       ['Discount Effect (%)', calculatedDiscountEffect],
-      ['Students (Year 1)', numChildrenYear1],
-      ['Students (Year 2)', numChildrenYear2],
-      ['Students (Year 3)', numChildrenYear3],
-      ['Fee per Term (Year 1)', feePerTermYear1],
-      ['Fee per Term (Year 2)', feePerTermYear2],
-      ['Fee per Term (Year 3)', feePerTermYear3],
-      ['Fee Increase (Year 1 %)', feeIncreaseYear1],
-      ['Fee Increase (Year 2 %)', feeIncreaseYear2],
-      ['Fee Increase (Year 3 %)', feeIncreaseYear3],
-      ['Pay Increase (Year 1 %)', payIncreaseYear1],
-      ['Pay Increase (Year 2 %)', payIncreaseYear2],
-      ['Pay Increase (Year 3 %)', payIncreaseYear3],
+      ['Students Input Mode', useStudentsByYear ? 'Per year' : 'Single value'],
+      ['Students (Year 1)', childrenByYear[0]],
+      ['Students (Year 2)', childrenByYear[1]],
+      ['Students (Year 3)', childrenByYear[2]],
+      ['Fee Input Mode', useFeePerTermByYear ? 'Explicit per year' : 'Compounded from base fee'],
+      ['Fee per Term (Current)', currentFeePerTerm],
+      ['Fee per Term (Year 1)', projectedFeePerTermByYear[0]],
+      ['Fee per Term (Year 2)', projectedFeePerTermByYear[1]],
+      ['Fee per Term (Year 3)', projectedFeePerTermByYear[2]],
+      ['Fee Increase Applied (Year 1 %)', financialData[1].feeIncrease],
+      ['Fee Increase Applied (Year 2 %)', financialData[2].feeIncrease],
+      ['Fee Increase Applied (Year 3 %)', financialData[3].feeIncrease],
+      ['Pay Increase Applied (Year 1 %)', usesDetailedStaffByYear ? 0 : payIncreaseByYear[0]],
+      ['Pay Increase Applied (Year 2 %)', usesDetailedStaffByYear ? 0 : payIncreaseByYear[1]],
+      ['Pay Increase Applied (Year 3 %)', usesDetailedStaffByYear ? 0 : payIncreaseByYear[2]],
       ['Inflation (Year 1 %)', inflationYear1],
       ['Inflation (Year 2 %)', inflationYear2],
       ['Inflation (Year 3 %)', inflationYear3],
-      ['Staff Costs Mode', useDetailedStaffCosts ? 'Detailed' : 'Share'],
+      ['Staff Costs Mode', usesDetailedStaffByYear ? 'Detailed (per year)' : useDetailedStaffCosts ? 'Detailed' : 'Share'],
       ['Staff Cost Share (%)', staffCostShare],
       ['Teacher Salary (Year 1)', avgAnnualSalaryYear1],
       ['Teacher Salary (Year 2)', avgAnnualSalaryYear2],
@@ -740,6 +960,7 @@ function App() {
   const currentSupportCount = supportByYear[0]
 
   const termsPerYear = 3
+  const projectionYears = ['Year 1', 'Year 2', 'Year 3']
   const effectiveDiscount = calculatedDiscountEffect / 100
   const grossAnnualRevenue = currentStudentCount * currentFeePerTerm * termsPerYear
   const discountAmount = grossAnnualRevenue * effectiveDiscount
@@ -764,128 +985,54 @@ function App() {
     nonStaffCosts: currentNonStaffCosts,
   }
 
-  const year1FeeIncrease = feeIncreaseByYear[0]
-  const year1PayIncrease = payIncreaseByYear[0]
-  const year1InflationRate = inflationByYear[0]
-  const year1FeeMultiplier = 1 + year1FeeIncrease / 100
-  const year1PayMultiplier = 1 + year1PayIncrease / 100
-  const year1InflationMultiplier = 1 + year1InflationRate / 100
+  const calculateRateChange = (previousValue: number, nextValue: number) => {
+    if (previousValue <= 0) {
+      return 0
+    }
 
-  const year1GrossRevenue = childrenByYear[0] * feePerTermByYear[0] * termsPerYear * year1FeeMultiplier
-  const year1DiscountAmount = year1GrossRevenue * effectiveDiscount
-  const year1Revenue = year1GrossRevenue - year1DiscountAmount
-
-  const year1BaseStaffCosts = useDetailedStaffCosts
-    ? (teacherSalaryByYear[0] * teachersByYear[0] + supportSalaryByYear[0] * supportByYear[0])
-    : (
-      // fallback to "Current" staffCosts, but properly update:
-      ((currentTeacherSalary * currentTeacherCount) + (currentSupportSalary * currentSupportCount)) // fallback, safe for legacy/calc
-    )
-  const year1StaffCosts = useDetailedStaffCosts && useStaffByYear
-    ? year1BaseStaffCosts
-    : year1BaseStaffCosts * year1PayMultiplier
-  const year1NonStaffCosts = currentNonStaffCosts * year1InflationMultiplier
-  const year1Costs = year1StaffCosts + year1NonStaffCosts
-  const year1AnnualSurplus = year1Revenue - year1Costs
-  const year1Net = currentData.netPosition + year1AnnualSurplus
-
-  const year1Data: FinancialData = {
-    year: 'Year 1',
-    revenue: year1Revenue,
-    costs: year1Costs,
-    annualSurplus: year1AnnualSurplus,
-    netPosition: year1Net,
-    feeIncrease: year1FeeIncrease,
-    payIncrease: year1PayIncrease,
-    discountAmount: year1DiscountAmount,
-    grossRevenue: year1GrossRevenue,
-    staffCosts: year1StaffCosts,
-    nonStaffCosts: year1NonStaffCosts,
+    return ((nextValue - previousValue) / previousValue) * 100
   }
 
-  const year2FeeIncrease = feeIncreaseByYear[1]
-  const year2PayIncrease = payIncreaseByYear[1]
-  const year2InflationRate = inflationByYear[1]
-  const year2FeeMultiplier = 1 + year2FeeIncrease / 100
-  const year2PayMultiplier = 1 + year2PayIncrease / 100
-  const year2InflationMultiplier = 1 + year2InflationRate / 100
+  const usesDetailedStaffByYear = useDetailedStaffCosts && useStaffByYear
+  const yearlyProjectionData: FinancialData[] = []
+  let previousData = currentData
+  let previousFeePerTerm = currentFeePerTerm
 
-  const year2GrossRevenue = childrenByYear[1] * feePerTermByYear[1] * termsPerYear * year2FeeMultiplier
-  const year2DiscountAmount = year2GrossRevenue * effectiveDiscount
-  const year2Revenue = year2GrossRevenue - year2DiscountAmount
+  for (let index = 0; index < projectionYears.length; index += 1) {
+    const grossRevenueForYear = childrenByYear[index] * projectedFeePerTermByYear[index] * termsPerYear
+    const discountAmountForYear = grossRevenueForYear * effectiveDiscount
+    const revenueForYear = grossRevenueForYear - discountAmountForYear
+    const detailedStaffCostsForYear =
+      (teacherSalaryByYear[index] * teachersByYear[index]) +
+      (supportSalaryByYear[index] * supportByYear[index])
+    const staffCostsForYear = usesDetailedStaffByYear
+      ? detailedStaffCostsForYear
+      : previousData.staffCosts * (1 + payIncreaseByYear[index] / 100)
+    const nonStaffCostsForYear = previousData.nonStaffCosts * (1 + inflationByYear[index] / 100)
+    const costsForYear = staffCostsForYear + nonStaffCostsForYear
+    const annualSurplusForYear = revenueForYear - costsForYear
+    const netPositionForYear = previousData.netPosition + annualSurplusForYear
+    const row: FinancialData = {
+      year: projectionYears[index],
+      revenue: revenueForYear,
+      costs: costsForYear,
+      annualSurplus: annualSurplusForYear,
+      netPosition: netPositionForYear,
+      feeIncrease: calculateRateChange(previousFeePerTerm, projectedFeePerTermByYear[index]),
+      payIncrease: usesDetailedStaffByYear ? 0 : payIncreaseByYear[index],
+      discountAmount: discountAmountForYear,
+      grossRevenue: grossRevenueForYear,
+      staffCosts: staffCostsForYear,
+      nonStaffCosts: nonStaffCostsForYear,
+    }
 
-  const year2BaseStaffCosts = useDetailedStaffCosts
-    ? (teacherSalaryByYear[1] * teachersByYear[1] + supportSalaryByYear[1] * supportByYear[1])
-    : (
-      ((currentTeacherSalary * currentTeacherCount) + (currentSupportSalary * currentSupportCount))
-    )
-  const year2StaffCosts = useDetailedStaffCosts && useStaffByYear
-    ? year2BaseStaffCosts
-    : year2BaseStaffCosts * year2PayMultiplier
-  const year2NonStaffCosts = currentNonStaffCosts * year2InflationMultiplier
-  const year2Costs = year2StaffCosts + year2NonStaffCosts
-  const year2AnnualSurplus = year2Revenue - year2Costs
-  const year2Net = year1Data.netPosition + year2AnnualSurplus
-
-  const year2Data: FinancialData = {
-    year: 'Year 2',
-    revenue: year2Revenue,
-    costs: year2Costs,
-    annualSurplus: year2AnnualSurplus,
-    netPosition: year2Net,
-    feeIncrease: year2FeeIncrease,
-    payIncrease: year2PayIncrease,
-    discountAmount: year2DiscountAmount,
-    grossRevenue: year2GrossRevenue,
-    staffCosts: year2StaffCosts,
-    nonStaffCosts: year2NonStaffCosts,
-  }
-
-  const year3FeeIncrease = feeIncreaseByYear[2]
-  const year3PayIncrease = payIncreaseByYear[2]
-  const year3InflationRate = inflationByYear[2]
-  const year3FeeMultiplier = 1 + year3FeeIncrease / 100
-  const year3PayMultiplier = 1 + year3PayIncrease / 100
-  const year3InflationMultiplier = 1 + year3InflationRate / 100
-
-  const year3GrossRevenue = childrenByYear[2] * feePerTermByYear[2] * termsPerYear * year3FeeMultiplier
-  const year3DiscountAmount = year3GrossRevenue * effectiveDiscount
-  const year3Revenue = year3GrossRevenue - year3DiscountAmount
-
-  const year3BaseStaffCosts = useDetailedStaffCosts
-    ? (teacherSalaryByYear[2] * teachersByYear[2] + supportSalaryByYear[2] * supportByYear[2])
-    : (
-      ((currentTeacherSalary * currentTeacherCount) + (currentSupportSalary * currentSupportCount))
-    )
-  const year3StaffCosts = useDetailedStaffCosts && useStaffByYear
-    ? year3BaseStaffCosts
-    : year3BaseStaffCosts * year3PayMultiplier
-  const year3NonStaffCosts = currentNonStaffCosts * year3InflationMultiplier
-  const year3Costs = year3StaffCosts + year3NonStaffCosts
-  const year3AnnualSurplus = year3Revenue - year3Costs
-  const year3Net = year2Data.netPosition + year3AnnualSurplus
-
-  const year3Data: FinancialData = {
-    year: 'Year 3',
-    revenue: year3Revenue,
-    costs: year3Costs,
-    annualSurplus: year3AnnualSurplus,
-    netPosition: year3Net,
-    feeIncrease: year3FeeIncrease,
-    payIncrease: year3PayIncrease,
-    discountAmount: year3DiscountAmount,
-    grossRevenue: year3GrossRevenue,
-    staffCosts: year3StaffCosts,
-    nonStaffCosts: year3NonStaffCosts,
+    yearlyProjectionData.push(row)
+    previousData = row
+    previousFeePerTerm = projectedFeePerTermByYear[index]
   }
 
   // Calculate financial projections
-  const financialData: FinancialData[] = [
-    currentData,
-    year1Data,
-    year2Data,
-    year3Data,
-  ]
+  const financialData: FinancialData[] = [currentData, ...yearlyProjectionData]
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-GB', {
@@ -918,40 +1065,16 @@ function App() {
     }).format(value)
   }
 
-  const baseCalculations = useMemo(() => {
-    const termsPerYear = 3
-    const effectiveDiscount = calculatedDiscountEffect / 100
-    const grossAnnualRevenue = currentStudentCount * currentFeePerTerm * termsPerYear
-    const discountAmount = grossAnnualRevenue * effectiveDiscount
-    const currentAnnualRevenue = grossAnnualRevenue - discountAmount
-    const currentAnnualCosts = currentAnnualRevenue - currentSurplus
-    const staffCosts = useDetailedStaffCosts
-      ? (currentTeacherSalary * currentTeacherCount) + (currentSupportSalary * currentSupportCount)
-      : currentAnnualCosts * (staffCostShare / 100)
-    const nonStaffCosts = currentAnnualCosts - staffCosts
-
-    return {
-      termsPerYear,
-      effectiveDiscount,
-      grossAnnualRevenue,
-      discountAmount,
-      currentAnnualRevenue,
-      currentAnnualCosts,
-      staffCosts,
-      nonStaffCosts,
-    }
-  }, [
-    currentFeePerTerm,
-    currentStudentCount,
-    calculatedDiscountEffect,
-    currentSurplus,
-    staffCostShare,
-    useDetailedStaffCosts,
-    currentTeacherSalary,
-    currentSupportSalary,
-    currentTeacherCount,
-    currentSupportCount,
-  ])
+  const baseCalculations = {
+    termsPerYear: 3,
+    effectiveDiscount: calculatedDiscountEffect / 100,
+    grossAnnualRevenue,
+    discountAmount,
+    currentAnnualRevenue,
+    currentAnnualCosts,
+    staffCosts: currentStaffCosts,
+    nonStaffCosts: currentNonStaffCosts,
+  }
 
   return (
     <ThemeProvider theme={theme}>
@@ -969,6 +1092,15 @@ function App() {
               size="small"
               icon={<Assessment />}
             />
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 2 }}>
+              <LightMode fontSize="small" />
+              <Switch
+                checked={themeMode === 'dark'}
+                onChange={(e) => setThemeMode(e.target.checked ? 'dark' : 'light')}
+                inputProps={{ 'aria-label': 'Toggle dark mode' }}
+              />
+              <DarkMode fontSize="small" />
+            </Stack>
           </Toolbar>
         </AppBar>
 
@@ -1046,6 +1178,39 @@ function App() {
                               Delete
                             </Button>
                           </Stack>
+                        </Stack>
+                      </AccordionDetails>
+                    </Accordion>
+
+                    <Accordion defaultExpanded={false}>
+                      <AccordionSummary expandIcon={<ExpandMore />}>
+                        <Typography>Presets</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Stack spacing={1.5}>
+                          {presetOptions.map((preset) => (
+                            <Paper
+                              key={preset.id}
+                              variant="outlined"
+                              sx={{ p: 1.5, borderRadius: 2 }}
+                            >
+                              <Stack spacing={1}>
+                                <Box>
+                                  <Typography variant="subtitle2">{preset.label}</Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {preset.description}
+                                  </Typography>
+                                </Box>
+                                <Button
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={() => handleApplyPreset(preset.id)}
+                                >
+                                  Apply
+                                </Button>
+                              </Stack>
+                            </Paper>
+                          ))}
                         </Stack>
                       </AccordionDetails>
                     </Accordion>
@@ -1768,7 +1933,7 @@ function App() {
                       </AccordionSummary>
                       <AccordionDetails>
                         <Stack spacing={2}>
-                          <Paper elevation={0} sx={{ p: 2, bgcolor: 'primary.light', color: 'white' }}>
+                          <Paper elevation={0} sx={{ p: 2, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
                             <Typography variant="subtitle2" gutterBottom>
                               Gross Annual Revenue
                             </Typography>
@@ -2025,27 +2190,32 @@ function App() {
                       </Typography>
                       <Box ref={turnoverChartRef}>
                         <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={financialData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="year" />
-                          <YAxis tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
-                          <Tooltip formatter={(value) => formatTooltipValue(value)} />
-                          <Legend />
-                          <Line
-                            type="monotone"
-                            dataKey="revenue"
-                            stroke="#2e7d32"
-                            strokeWidth={2}
-                            name="Turnover"
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="costs"
-                            stroke="#d32f2f"
-                            strokeWidth={2}
-                            name="Costs"
-                          />
-                        </LineChart>
+                          <LineChart data={financialData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                            <XAxis dataKey="year" tick={{ fill: chartAxisColor }} />
+                            <YAxis tick={{ fill: chartAxisColor }} tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
+                            <Tooltip
+                              formatter={(value) => formatTooltipValue(value)}
+                              contentStyle={chartTooltipContentStyle}
+                              labelStyle={chartTooltipLabelStyle}
+                              itemStyle={chartTooltipItemStyle}
+                            />
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey="revenue"
+                              stroke="#2e7d32"
+                              strokeWidth={2}
+                              name="Turnover"
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="costs"
+                              stroke="#d32f2f"
+                              strokeWidth={2}
+                              name="Costs"
+                            />
+                          </LineChart>
                         </ResponsiveContainer>
                       </Box>
                     </CardContent>
@@ -2059,10 +2229,15 @@ function App() {
                       <Box ref={surplusChartRef}>
                         <ResponsiveContainer width="100%" height={250}>
                           <BarChart data={financialData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="year" />
-                            <YAxis tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
-                            <Tooltip formatter={(value) => formatTooltipValue(value)} />
+                            <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                            <XAxis dataKey="year" tick={{ fill: chartAxisColor }} />
+                            <YAxis tick={{ fill: chartAxisColor }} tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
+                            <Tooltip
+                              formatter={(value) => formatTooltipValue(value)}
+                              contentStyle={chartTooltipContentStyle}
+                              labelStyle={chartTooltipLabelStyle}
+                              itemStyle={chartTooltipItemStyle}
+                            />
                             <Legend />
                             <Bar dataKey="annualSurplus" name="Annual Surplus" fill="#1976d2" />
                             <Bar dataKey="netPosition" name="Cumulative Surplus" fill="#9c27b0" />
@@ -2080,10 +2255,15 @@ function App() {
                       <Box ref={breakdownChartRef}>
                         <ResponsiveContainer width="100%" height={250}>
                           <BarChart data={financialData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="year" />
-                            <YAxis tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
-                            <Tooltip formatter={(value) => formatTooltipValue(value)} />
+                            <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                            <XAxis dataKey="year" tick={{ fill: chartAxisColor }} />
+                            <YAxis tick={{ fill: chartAxisColor }} tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
+                            <Tooltip
+                              formatter={(value) => formatTooltipValue(value)}
+                              contentStyle={chartTooltipContentStyle}
+                              labelStyle={chartTooltipLabelStyle}
+                              itemStyle={chartTooltipItemStyle}
+                            />
                             <Legend />
                             <Bar dataKey="revenue" fill="#2e7d32" name="Turnover" />
                             <Bar dataKey="costs" fill="#d32f2f" name="Costs" />
@@ -2105,7 +2285,7 @@ function App() {
                     </Box>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
+                    <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'action.hover' }}>
                       <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
                         Base Calculations
                       </Typography>
@@ -2158,13 +2338,24 @@ function App() {
 
                     {financialData.slice(1).map((year, index) => {
                       const yearNum = index + 1
-                      const feeIncreaseForYear = feeIncreaseByYear[index]
+                      const studentsForYear = childrenByYear[index]
+                      const feePerTermForYear = projectedFeePerTermByYear[index]
+                      const previousFeePerTermForYear = index === 0
+                        ? currentFeePerTerm
+                        : projectedFeePerTermByYear[index - 1]
+                      const feeIncreaseForYear = previousFeePerTermForYear > 0
+                        ? ((feePerTermForYear - previousFeePerTermForYear) / previousFeePerTermForYear) * 100
+                        : 0
                       const payIncreaseForYear = payIncreaseByYear[index]
                       const inflationRate = inflationByYear[index]
-                      const prevGrossRevenue =
-                        index === 0 ? baseCalculations.grossAnnualRevenue : financialData[index].grossRevenue
                       const previousYear = financialData[index]
-                      const staffCostsAfterPay = previousYear.staffCosts * (1 + payIncreaseForYear / 100)
+                      const usesDetailedInputsForStaff = useDetailedStaffCosts && useStaffByYear
+                      const detailedStaffCostsForYear =
+                        (teacherSalaryByYear[index] * teachersByYear[index]) +
+                        (supportSalaryByYear[index] * supportByYear[index])
+                      const staffCostsAfterPay = usesDetailedInputsForStaff
+                        ? detailedStaffCostsForYear
+                        : previousYear.staffCosts * (1 + payIncreaseForYear / 100)
                       const nonStaffCostsAfterInflation = previousYear.nonStaffCosts * (1 + inflationRate / 100)
                       const combinedCosts = staffCostsAfterPay + nonStaffCostsAfterInflation
 
@@ -2175,35 +2366,47 @@ function App() {
                           </Typography>
                           <Stack spacing={1.5}>
                             <Typography variant="body2">
-                              <strong>Step 1:</strong> Gross Revenue = {formatCurrency(prevGrossRevenue)} × (1 +{' '}
-                              {feeIncreaseForYear}%) = {formatCurrency(year.grossRevenue)}
+                              <strong>Step 1:</strong> Gross Revenue = {formatNumber(studentsForYear)} ×{' '}
+                              £{formatNumber(feePerTermForYear)} × 3 = {formatCurrency(year.grossRevenue)}
                             </Typography>
                             <Typography variant="body2">
-                              <strong>Step 2:</strong> Discount = {formatCurrency(year.grossRevenue)} ×{' '}
+                              <strong>Step 2:</strong> Fee Change = £{formatNumber(previousFeePerTermForYear)} →{' '}
+                              £{formatNumber(feePerTermForYear)} ({formatNumber(feeIncreaseForYear)}%)
+                            </Typography>
+                            <Typography variant="body2">
+                              <strong>Step 3:</strong> Discount = {formatCurrency(year.grossRevenue)} ×{' '}
                               {formatNumber(calculatedDiscountEffect)}% = {formatCurrency(year.discountAmount)}
                             </Typography>
                             <Typography variant="body2">
-                              <strong>Step 3:</strong> Turnover = {formatCurrency(year.grossRevenue)} -{' '}
+                              <strong>Step 4:</strong> Turnover = {formatCurrency(year.grossRevenue)} -{' '}
                               {formatCurrency(year.discountAmount)} = {formatCurrency(year.revenue)}
                             </Typography>
+                            {usesDetailedInputsForStaff ? (
+                              <Typography variant="body2">
+                                <strong>Step 5:</strong> Staff Costs = ({formatNumber(teachersByYear[index])} ×{' '}
+                                {formatCurrency(teacherSalaryByYear[index])}) + ({formatNumber(supportByYear[index])} ×{' '}
+                                {formatCurrency(supportSalaryByYear[index])}) = {formatCurrency(staffCostsAfterPay)}
+                              </Typography>
+                            ) : (
+                              <Typography variant="body2">
+                                <strong>Step 5:</strong> Staff Costs = {formatCurrency(previousYear.staffCosts)} × (1 +{' '}
+                                {formatNumber(payIncreaseForYear)}%) = {formatCurrency(staffCostsAfterPay)}
+                              </Typography>
+                            )}
                             <Typography variant="body2">
-                              <strong>Step 4:</strong> Staff Costs = {formatCurrency(previousYear.staffCosts)} × (1 +{' '}
-                              {payIncreaseForYear}%) = {formatCurrency(staffCostsAfterPay)}
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Step 5:</strong> Non-Staff Costs = {formatCurrency(previousYear.nonStaffCosts)} ×{' '}
+                              <strong>Step 6:</strong> Non-Staff Costs = {formatCurrency(previousYear.nonStaffCosts)} ×{' '}
                               (1 + {inflationRate}%) = {formatCurrency(nonStaffCostsAfterInflation)}
                             </Typography>
                             <Typography variant="body2">
-                              <strong>Step 6:</strong> Total Costs = {formatCurrency(staffCostsAfterPay)} +{' '}
+                              <strong>Step 7:</strong> Total Costs = {formatCurrency(staffCostsAfterPay)} +{' '}
                               {formatCurrency(nonStaffCostsAfterInflation)} = {formatCurrency(combinedCosts)}
                             </Typography>
                             <Typography variant="body2">
-                              <strong>Step 7:</strong> Annual Surplus = {formatCurrency(year.revenue)} -{' '}
+                              <strong>Step 8:</strong> Annual Surplus = {formatCurrency(year.revenue)} -{' '}
                               {formatCurrency(year.costs)} = {formatCurrency(year.annualSurplus)}
                             </Typography>
                             <Typography variant="body2">
-                              <strong>Step 8:</strong> Cumulative Surplus = Previous Surplus + Annual Surplus ={' '}
+                              <strong>Step 9:</strong> Cumulative Surplus = Previous Surplus + Annual Surplus ={' '}
                               {formatCurrency(previousYear.netPosition)} + {formatCurrency(year.annualSurplus)} ={' '}
                               {formatCurrency(year.netPosition)}
                             </Typography>
