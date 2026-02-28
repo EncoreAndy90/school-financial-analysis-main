@@ -51,7 +51,7 @@ import {
   AccountBalance,
   People,
   School,
-  AttachMoney,
+  CurrencyPound,
   ExpandMore,
   DarkMode,
   LightMode,
@@ -1347,7 +1347,7 @@ function App() {
                                 InputProps={{
                                   startAdornment: (
                                     <InputAdornment position="start">
-                                      <AttachMoney />
+                                      <CurrencyPound />
                                     </InputAdornment>
                                   ),
                                 }}
@@ -1361,7 +1361,7 @@ function App() {
                                 InputProps={{
                                   startAdornment: (
                                     <InputAdornment position="start">
-                                      <AttachMoney />
+                                      <CurrencyPound />
                                     </InputAdornment>
                                   ),
                                 }}
@@ -1375,7 +1375,7 @@ function App() {
                                 InputProps={{
                                   startAdornment: (
                                     <InputAdornment position="start">
-                                      <AttachMoney />
+                                      <CurrencyPound />
                                     </InputAdornment>
                                   ),
                                 }}
@@ -1391,7 +1391,7 @@ function App() {
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <AttachMoney />
+                                    <CurrencyPound />
                                   </InputAdornment>
                                 ),
                               }}
@@ -1572,7 +1572,7 @@ function App() {
                                     InputProps={{
                                       startAdornment: (
                                         <InputAdornment position="start">
-                                          <AttachMoney />
+                                          <CurrencyPound />
                                         </InputAdornment>
                                       ),
                                     }}
@@ -1619,7 +1619,7 @@ function App() {
                                     InputProps={{
                                       startAdornment: (
                                         <InputAdornment position="start">
-                                          <AttachMoney />
+                                          <CurrencyPound />
                                         </InputAdornment>
                                       ),
                                     }}
@@ -1648,7 +1648,7 @@ function App() {
                                     InputProps={{
                                       startAdornment: (
                                         <InputAdornment position="start">
-                                          <AttachMoney />
+                                          <CurrencyPound />
                                         </InputAdornment>
                                       ),
                                     }}
@@ -1695,7 +1695,7 @@ function App() {
                                     InputProps={{
                                       startAdornment: (
                                         <InputAdornment position="start">
-                                          <AttachMoney />
+                                          <CurrencyPound />
                                         </InputAdornment>
                                       ),
                                     }}
@@ -1724,7 +1724,7 @@ function App() {
                                     InputProps={{
                                       startAdornment: (
                                         <InputAdornment position="start">
-                                          <AttachMoney />
+                                          <CurrencyPound />
                                         </InputAdornment>
                                       ),
                                     }}
@@ -1771,7 +1771,7 @@ function App() {
                                     InputProps={{
                                       startAdornment: (
                                         <InputAdornment position="start">
-                                          <AttachMoney />
+                                          <CurrencyPound />
                                         </InputAdornment>
                                       ),
                                     }}
@@ -1802,7 +1802,7 @@ function App() {
                                     InputProps={{
                                       startAdornment: (
                                         <InputAdornment position="start">
-                                          <AttachMoney />
+                                          <CurrencyPound />
                                         </InputAdornment>
                                       ),
                                     }}
@@ -1830,7 +1830,7 @@ function App() {
                                     InputProps={{
                                       startAdornment: (
                                         <InputAdornment position="start">
-                                          <AttachMoney />
+                                          <CurrencyPound />
                                         </InputAdornment>
                                       ),
                                     }}
@@ -2057,7 +2057,7 @@ function App() {
                             InputProps={{
                               startAdornment: (
                                 <InputAdornment position="start">
-                                  <AttachMoney />
+                                  <CurrencyPound />
                                 </InputAdornment>
                               ),
                             }}
