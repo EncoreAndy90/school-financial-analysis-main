@@ -2,6 +2,8 @@
 
 A single-page app for modeling a school’s current financial position and producing a 3-year projection. Enter student numbers, fees, discounts, staffing costs, and inflation assumptions to see turnover, costs, and surplus across four years (current + 3).
 
+Built with React, TypeScript, Vite, Tailwind CSS, and [shadcn/ui](https://ui.shadcn.com/) components (Radix primitives). Charts use Recharts; exports use jsPDF and ExcelJS.
+
 ## What It Does
 
 - Calculates current-year turnover, costs, and surplus from your inputs.
@@ -53,6 +55,14 @@ npm run preview
 
 - PDF: includes an assumptions snapshot and a results table; charts are optional.
 - Excel: exports assumptions and results in separate worksheets.
+
+## Tech Stack
+
+- React 19 + TypeScript + Vite
+- Tailwind CSS for styling
+- shadcn/ui components (built on Radix UI) in `src/components/ui`
+- Recharts for charts, jsPDF + ExcelJS for exports
+- Light/dark theme via a `dark` class toggle and CSS variables
 
 ## Notes and Assumptions
 

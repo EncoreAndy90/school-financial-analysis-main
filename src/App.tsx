@@ -7,67 +7,79 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
 } from 'recharts'
 import {
-  ThemeProvider,
-  createTheme,
-  CssBaseline,
-  Container,
-  Card,
-  CardContent,
-  Typography,
-  TextField,
-  Slider,
-  Box,
-  Paper,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Chip,
-  MenuItem,
-  AppBar,
-  Toolbar,
-  Stack,
-  InputAdornment,
-  Switch,
-  FormControlLabel,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Tooltip as MuiTooltip,
-} from '@mui/material'
-import Grid from '@mui/material/GridLegacy'
-import {
   Settings,
-  Assessment,
-  Calculate,
-  AccountBalance,
-  People,
-  School,
-  CurrencyPound,
-  ExpandMore,
-  DarkMode,
-  LightMode,
-  InfoOutlined,
-} from '@mui/icons-material'
-import './App.css'
+  BarChart3,
+  Calculator,
+  Landmark,
+  Users,
+  GraduationCap,
+  PoundSterling,
+  Moon,
+  Sun,
+  FileDown,
+  FileSpreadsheet,
+  TrendingUp,
+  Wallet,
+  PiggyBank,
+  LineChart as LineChartIcon,
+} from 'lucide-react'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import html2canvas from 'html2canvas'
+import ExcelJS from 'exceljs'
+
 import {
   createScenario,
   loadScenarios,
   saveScenarios,
 } from './utils/scenarios'
 import type { Scenario, ScenarioState } from './utils/scenarios'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import html2canvas from 'html2canvas'
-import ExcelJS from 'exceljs'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import {
+  InfoLabel,
+  NumberField,
+  SliderField,
+  SwitchField,
+} from '@/components/form-fields'
+import { cn } from '@/lib/utils'
 
 interface FinancialData {
   year: string
@@ -99,15 +111,6 @@ const getInitialThemeMode = (): ThemeMode => {
 
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
-
-const LabelWithTooltip = ({ label, tooltip }: { label: string; tooltip: string }) => (
-  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-    <span>{label}</span>
-    <MuiTooltip title={tooltip} arrow>
-      <InfoOutlined sx={{ fontSize: '0.9rem', color: 'text.secondary', cursor: 'help' }} />
-    </MuiTooltip>
-  </Box>
-)
 
 function App() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode)
@@ -165,83 +168,28 @@ function App() {
   const surplusChartRef = useRef<HTMLDivElement | null>(null)
   const breakdownChartRef = useRef<HTMLDivElement | null>(null)
 
-  const theme = useMemo(
-    () => createTheme({
-      palette: {
-        mode: themeMode,
-        primary: {
-          main: '#1976d2',
-          light: '#42a5f5',
-          dark: '#1565c0',
-        },
-        secondary: {
-          main: '#9c27b0',
-          light: '#ba68c8',
-          dark: '#7b1fa2',
-        },
-        success: {
-          main: '#2e7d32',
-          light: '#4caf50',
-        },
-        error: {
-          main: '#d32f2f',
-          light: '#ef5350',
-        },
-        background: themeMode === 'dark'
-          ? {
-              default: '#0f172a',
-              paper: '#111827',
-            }
-          : {
-              default: '#f5f5f5',
-              paper: '#ffffff',
-            },
-      },
-      typography: {
-        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-        h4: {
-          fontWeight: 600,
-        },
-        h5: {
-          fontWeight: 600,
-        },
-        h6: {
-          fontWeight: 600,
-        },
-      },
-      shape: {
-        borderRadius: 12,
-      },
-      components: {
-        MuiCard: {
-          styleOverrides: {
-            root: {
-              boxShadow: themeMode === 'dark'
-                ? '0 4px 14px rgba(0,0,0,0.45)'
-                : '0 2px 8px rgba(0,0,0,0.1)',
-            },
-          },
-        },
-      },
-    }),
-    [themeMode],
-  )
-
-  const chartAxisColor = theme.palette.text.secondary
-  const chartGridColor = theme.palette.mode === 'dark' ? 'rgba(148, 163, 184, 0.25)' : 'rgba(15, 23, 42, 0.14)'
+  const isDark = themeMode === 'dark'
+  const chartAxisColor = isDark ? '#94a3b8' : '#475569'
+  const chartGridColor = isDark ? 'rgba(148, 163, 184, 0.25)' : 'rgba(15, 23, 42, 0.14)'
   const chartTooltipContentStyle = {
-    backgroundColor: theme.palette.background.paper,
-    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: isDark ? '#111827' : '#ffffff',
+    border: `1px solid ${isDark ? '#1f2937' : '#e2e8f0'}`,
     borderRadius: 8,
   }
-  const chartTooltipLabelStyle = { color: theme.palette.text.primary }
-  const chartTooltipItemStyle = { color: theme.palette.text.primary }
+  const chartTooltipLabelStyle = { color: isDark ? '#f1f5f9' : '#0f172a' }
+  const chartTooltipItemStyle = { color: isDark ? '#f1f5f9' : '#0f172a' }
 
   useEffect(() => {
     saveScenarios(scenarios)
   }, [scenarios])
 
   useEffect(() => {
+    const root = document.documentElement
+    if (themeMode === 'dark') {
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+    }
     window.localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode)
   }, [themeMode])
 
@@ -1087,1445 +1035,1081 @@ function App() {
     nonStaffCosts: currentNonStaffCosts,
   }
 
+  const year3 = financialData[3]
+  const summaryCards = [
+    {
+      label: 'Current Turnover',
+      value: formatCurrency(financialData[0].revenue),
+      icon: <Wallet className="h-4 w-4" />,
+      tone: 'neutral' as const,
+    },
+    {
+      label: 'Year 3 Turnover',
+      value: formatCurrency(year3.revenue),
+      icon: <TrendingUp className="h-4 w-4" />,
+      tone: 'neutral' as const,
+    },
+    {
+      label: 'Year 3 Annual Surplus',
+      value: formatCurrency(year3.annualSurplus),
+      icon: <LineChartIcon className="h-4 w-4" />,
+      tone: year3.annualSurplus >= 0 ? ('positive' as const) : ('negative' as const),
+    },
+    {
+      label: 'Year 3 Cumulative Surplus',
+      value: formatCurrency(year3.netPosition),
+      icon: <PiggyBank className="h-4 w-4" />,
+      tone: year3.netPosition >= 0 ? ('positive' as const) : ('negative' as const),
+    },
+  ]
+
+  const surplusToneClass = (tone: 'neutral' | 'positive' | 'negative') =>
+    tone === 'positive'
+      ? 'text-success'
+      : tone === 'negative'
+        ? 'text-destructive'
+        : 'text-foreground'
+
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Box sx={{ flexGrow: 1, minHeight: '100vh', bgcolor: 'background.default' }}>
-        <AppBar position="static" elevation={2}>
-          <Toolbar>
-            <AccountBalance sx={{ mr: 2 }} />
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
-              School Financial Analysis
-            </Typography>
-            <Chip
-              label="3-Year Projection"
-              color="secondary"
-              size="small"
-              icon={<Assessment />}
-            />
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ ml: 2 }}>
-              <LightMode fontSize="small" />
-              <Switch
-                checked={themeMode === 'dark'}
-                onChange={(e) => setThemeMode(e.target.checked ? 'dark' : 'light')}
-                inputProps={{ 'aria-label': 'Toggle dark mode' }}
-              />
-              <DarkMode fontSize="small" />
-            </Stack>
-          </Toolbar>
-        </AppBar>
+    <TooltipProvider delayDuration={200}>
+      <div className="min-h-screen bg-background text-foreground">
+        <header className="sticky top-0 z-40 border-b bg-card/90 backdrop-blur supports-[backdrop-filter]:bg-card/70">
+          <div className="mx-auto flex max-w-screen-2xl items-center gap-3 px-4 py-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Landmark className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <h1 className="text-base font-semibold leading-tight sm:text-lg">
+                School Financial Analysis
+              </h1>
+              <p className="hidden text-xs text-muted-foreground sm:block">
+                Budgeting &amp; 3-year planning workbench
+              </p>
+            </div>
+            <Badge variant="secondary" className="hidden gap-1 sm:inline-flex">
+              <BarChart3 className="h-3.5 w-3.5" />
+              3-Year Projection
+            </Badge>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setThemeMode(isDark ? 'light' : 'dark')}
+              aria-label="Toggle dark mode"
+            >
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+          </div>
+        </header>
 
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-          <Grid container spacing={3} alignItems="stretch">
+        <main className="mx-auto max-w-screen-2xl px-4 py-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
             {/* Input Panel */}
-            <Grid item xs={12} md={4}>
-              <Card elevation={3} sx={{ height: '100%' }}>
-                <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                    <Settings sx={{ mr: 1, color: 'primary.main' }} />
-                    <Typography variant="h5" component="h2">
-                      Parameters
-                    </Typography>
-                  </Box>
-
-                  <Stack spacing={3}>
-                    <Accordion defaultExpanded={false}>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <LabelWithTooltip
+            <div className="lg:col-span-5 xl:col-span-4">
+              <Card className="lg:sticky lg:top-20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <Settings className="h-5 w-5 text-primary" />
+                    Parameters
+                  </CardTitle>
+                  <CardDescription>
+                    Adjust assumptions to model turnover, costs, and surplus.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="max-h-[calc(100vh-12rem)] overflow-y-auto lg:max-h-[calc(100vh-14rem)]">
+                  <Accordion type="multiple" className="w-full">
+                    <AccordionItem value="scenarios">
+                      <AccordionTrigger>
+                        <InfoLabel
                           label="Scenarios"
                           tooltip="Save, load, and manage named sets of model assumptions."
                         />
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Stack spacing={2}>
-                          <TextField
-                            select
-                            label={<LabelWithTooltip label="Saved Scenarios" tooltip="Choose an existing saved scenario to load or delete." />}
-                            value={selectedScenarioId}
-                            onChange={(e) => {
-                              const nextId = e.target.value
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-3">
+                        <div className="space-y-1.5">
+                          <Label>
+                            <InfoLabel label="Saved Scenarios" tooltip="Choose an existing saved scenario to load or delete." />
+                          </Label>
+                          <Select
+                            value={selectedScenarioId || 'none'}
+                            onValueChange={(value) => {
+                              const nextId = value === 'none' ? '' : value
                               setSelectedScenarioId(nextId)
                               const scenario = scenarios.find((item) => item.id === nextId)
                               setScenarioName(scenario?.name ?? '')
                             }}
-                            fullWidth
                           >
-                            <MenuItem value="">None</MenuItem>
-                            {scenarios.map((scenario) => (
-                              <MenuItem key={scenario.id} value={scenario.id}>
-                                {scenario.name}
-                              </MenuItem>
-                            ))}
-                          </TextField>
-                          <TextField
-                            label={<LabelWithTooltip label="Scenario Name" tooltip="Name used when saving this set of assumptions." />}
+                            <SelectTrigger>
+                              <SelectValue placeholder="None" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {scenarios.map((scenario) => (
+                                <SelectItem key={scenario.id} value={scenario.id}>
+                                  {scenario.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>
+                            <InfoLabel label="Scenario Name" tooltip="Name used when saving this set of assumptions." />
+                          </Label>
+                          <Input
                             value={scenarioName}
                             onChange={(e) => setScenarioName(e.target.value)}
-                            fullWidth
                           />
-                          <Stack direction="row" spacing={1} flexWrap="wrap">
-                            <Button
-                              variant="outlined"
-                              onClick={handleLoadScenario}
-                              disabled={!selectedScenarioId}
-                            >
-                              Load
-                            </Button>
-                            <Button
-                              variant="contained"
-                              onClick={() => handleSaveScenario('save')}
-                            >
-                              Save
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              onClick={() => handleSaveScenario('saveAs')}
-                            >
-                              Save As
-                            </Button>
-                            <Button
-                              variant="text"
-                              color="error"
-                              onClick={handleDeleteScenario}
-                              disabled={!selectedScenarioId}
-                            >
-                              Delete
-                            </Button>
-                          </Stack>
-                        </Stack>
-                      </AccordionDetails>
-                    </Accordion>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleLoadScenario}
+                            disabled={!selectedScenarioId}
+                          >
+                            Load
+                          </Button>
+                          <Button size="sm" onClick={() => handleSaveScenario('save')}>
+                            Save
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleSaveScenario('saveAs')}>
+                            Save As
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={handleDeleteScenario}
+                            disabled={!selectedScenarioId}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
 
-                    <Accordion defaultExpanded={false}>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <LabelWithTooltip
+                    <AccordionItem value="presets">
+                      <AccordionTrigger>
+                        <InfoLabel
                           label="Presets"
                           tooltip="Quick-start templates that apply predefined assumptions."
                         />
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Stack spacing={1.5}>
-                          {presetOptions.map((preset) => (
-                            <Paper
-                              key={preset.id}
-                              variant="outlined"
-                              sx={{ p: 1.5, borderRadius: 2 }}
-                            >
-                              <Stack spacing={1}>
-                                <Box>
-                                  <Typography variant="subtitle2">{preset.label}</Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {preset.description}
-                                  </Typography>
-                                </Box>
-                                <Button
-                                  variant="outlined"
-                                  size="small"
-                                  onClick={() => handleApplyPreset(preset.id)}
-                                >
-                                  Apply
-                                </Button>
-                              </Stack>
-                            </Paper>
-                          ))}
-                        </Stack>
-                      </AccordionDetails>
-                    </Accordion>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-2.5">
+                        {presetOptions.map((preset) => (
+                          <div key={preset.id} className="rounded-lg border p-3">
+                            <div className="space-y-2">
+                              <div>
+                                <p className="text-sm font-medium">{preset.label}</p>
+                                <p className="text-xs text-muted-foreground">{preset.description}</p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleApplyPreset(preset.id)}
+                              >
+                                Apply
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </AccordionContent>
+                    </AccordionItem>
 
-                    <Accordion defaultExpanded={false}>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <LabelWithTooltip
+                    <AccordionItem value="enrollment">
+                      <AccordionTrigger>
+                        <InfoLabel
                           label="Enrollment"
                           tooltip="Student numbers used to calculate fee revenue."
                         />
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Stack spacing={2}>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={useStudentsByYear}
-                                onChange={(e) => setUseStudentsByYear(e.target.checked)}
-                                color="primary"
-                              />
-                            }
-                            label={<LabelWithTooltip label="Set students per year" tooltip="Enable separate enrollment values for Year 1, Year 2, and Year 3." />}
-                          />
-                          {useStudentsByYear ? (
-                            <>
-                              <TextField
-                                label={<LabelWithTooltip label="Year 1 Students" tooltip="Projected number of students in Year 1." />}
-                                type="number"
-                                value={numChildrenYear1}
-                                onChange={(e) => setNumChildrenYear1(Number(e.target.value))}
-                                fullWidth
-                                InputProps={{
-                                  startAdornment: (
-                                    <InputAdornment position="start">
-                                      <People />
-                                    </InputAdornment>
-                                  ),
-                                }}
-                              />
-                              <TextField
-                                label={<LabelWithTooltip label="Year 2 Students" tooltip="Projected number of students in Year 2." />}
-                                type="number"
-                                value={numChildrenYear2}
-                                onChange={(e) => setNumChildrenYear2(Number(e.target.value))}
-                                fullWidth
-                                InputProps={{
-                                  startAdornment: (
-                                    <InputAdornment position="start">
-                                      <People />
-                                    </InputAdornment>
-                                  ),
-                                }}
-                              />
-                              <TextField
-                                label={<LabelWithTooltip label="Year 3 Students" tooltip="Projected number of students in Year 3." />}
-                                type="number"
-                                value={numChildrenYear3}
-                                onChange={(e) => setNumChildrenYear3(Number(e.target.value))}
-                                fullWidth
-                                InputProps={{
-                                  startAdornment: (
-                                    <InputAdornment position="start">
-                                      <People />
-                                    </InputAdornment>
-                                  ),
-                                }}
-                              />
-                            </>
-                          ) : (
-                            <TextField
-                              label={<LabelWithTooltip label="Number of Children" tooltip="Single enrollment value applied across all projected years." />}
-                              type="number"
-                              value={numChildren}
-                              onChange={(e) => setNumChildren(Number(e.target.value))}
-                              fullWidth
-                              InputProps={{
-                                startAdornment: (
-                                  <InputAdornment position="start">
-                                    <People />
-                                  </InputAdornment>
-                                ),
-                              }}
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-3">
+                        <SwitchField
+                          label="Set students per year"
+                          tooltip="Enable separate enrollment values for Year 1, Year 2, and Year 3."
+                          checked={useStudentsByYear}
+                          onCheckedChange={setUseStudentsByYear}
+                        />
+                        {useStudentsByYear ? (
+                          <>
+                            <NumberField
+                              label="Year 1 Students"
+                              tooltip="Projected number of students in Year 1."
+                              icon={<Users />}
+                              value={numChildrenYear1}
+                              onChange={setNumChildrenYear1}
                             />
-                          )}
-                        </Stack>
-                      </AccordionDetails>
-                    </Accordion>
+                            <NumberField
+                              label="Year 2 Students"
+                              tooltip="Projected number of students in Year 2."
+                              icon={<Users />}
+                              value={numChildrenYear2}
+                              onChange={setNumChildrenYear2}
+                            />
+                            <NumberField
+                              label="Year 3 Students"
+                              tooltip="Projected number of students in Year 3."
+                              icon={<Users />}
+                              value={numChildrenYear3}
+                              onChange={setNumChildrenYear3}
+                            />
+                          </>
+                        ) : (
+                          <NumberField
+                            label="Number of Children"
+                            tooltip="Single enrollment value applied across all projected years."
+                            icon={<Users />}
+                            value={numChildren}
+                            onChange={setNumChildren}
+                          />
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
 
-
-                    <Accordion defaultExpanded={false}>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <LabelWithTooltip
+                    <AccordionItem value="fees">
+                      <AccordionTrigger>
+                        <InfoLabel
                           label="Fees & Discounts"
                           tooltip="Fee levels, annual fee changes, and discount assumptions used in turnover."
                         />
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Stack spacing={2}>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={useFeePerTermByYear}
-                                onChange={(e) => setUseFeePerTermByYear(e.target.checked)}
-                                color="primary"
-                              />
-                            }
-                            label={<LabelWithTooltip label="Set fee per term per year" tooltip="Set explicit fee values for Year 1, Year 2, and Year 3." />}
-                          />
-                          {useFeePerTermByYear ? (
-                            <>
-                              <TextField
-                                label={<LabelWithTooltip label="Year 1 Fee per Term" tooltip="Fee charged per term in Year 1." />}
-                                type="number"
-                                value={feePerTermYear1}
-                                onChange={(e) => setFeePerTermYear1(Number(e.target.value))}
-                                fullWidth
-                                InputProps={{
-                                  startAdornment: (
-                                    <InputAdornment position="start">
-                                      <CurrencyPound />
-                                    </InputAdornment>
-                                  ),
-                                }}
-                              />
-                              <TextField
-                                label={<LabelWithTooltip label="Year 2 Fee per Term" tooltip="Fee charged per term in Year 2." />}
-                                type="number"
-                                value={feePerTermYear2}
-                                onChange={(e) => setFeePerTermYear2(Number(e.target.value))}
-                                fullWidth
-                                InputProps={{
-                                  startAdornment: (
-                                    <InputAdornment position="start">
-                                      <CurrencyPound />
-                                    </InputAdornment>
-                                  ),
-                                }}
-                              />
-                              <TextField
-                                label={<LabelWithTooltip label="Year 3 Fee per Term" tooltip="Fee charged per term in Year 3." />}
-                                type="number"
-                                value={feePerTermYear3}
-                                onChange={(e) => setFeePerTermYear3(Number(e.target.value))}
-                                fullWidth
-                                InputProps={{
-                                  startAdornment: (
-                                    <InputAdornment position="start">
-                                      <CurrencyPound />
-                                    </InputAdornment>
-                                  ),
-                                }}
-                              />
-                            </>
-                          ) : (
-                            <TextField
-                              label={<LabelWithTooltip label="Fee per Term" tooltip="Current base fee per term used to derive projected fees." />}
-                              type="number"
-                              value={feePerTerm}
-                              onChange={(e) => setFeePerTerm(Number(e.target.value))}
-                              fullWidth
-                              InputProps={{
-                                startAdornment: (
-                                  <InputAdornment position="start">
-                                    <CurrencyPound />
-                                  </InputAdornment>
-                                ),
-                              }}
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-3">
+                        <SwitchField
+                          label="Set fee per term per year"
+                          tooltip="Set explicit fee values for Year 1, Year 2, and Year 3."
+                          checked={useFeePerTermByYear}
+                          onCheckedChange={setUseFeePerTermByYear}
+                        />
+                        {useFeePerTermByYear ? (
+                          <>
+                            <NumberField
+                              label="Year 1 Fee per Term"
+                              tooltip="Fee charged per term in Year 1."
+                              icon={<PoundSterling />}
+                              value={feePerTermYear1}
+                              onChange={setFeePerTermYear1}
                             />
-                          )}
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={useFeeIncreaseByYear}
-                                onChange={(e) => setUseFeeIncreaseByYear(e.target.checked)}
-                                color="primary"
-                              />
-                            }
-                            label={<LabelWithTooltip label="Set fee increase per year" tooltip="Apply different annual fee growth rates for each projected year." />}
-                          />
-                          {useFeeIncreaseByYear ? (
-                            <>
-                              <Box>
-                                <Typography gutterBottom>
-                                  <LabelWithTooltip
-                                    label={`Year 1: ${feeIncreaseYear1}%`}
-                                    tooltip="Percentage fee increase applied for Year 1."
-                                  />
-                                </Typography>
-                                <Slider
-                                  value={feeIncreaseYear1}
-                                  onChange={(_, value) => setFeeIncreaseYear1(value as number)}
-                                  min={2}
-                                  max={6}
-                                  step={0.1}
-                                  marks
-                                  valueLabelDisplay="auto"
-                                />
-                              </Box>
-                              <Box>
-                                <Typography gutterBottom>
-                                  <LabelWithTooltip
-                                    label={`Year 2: ${feeIncreaseYear2}%`}
-                                    tooltip="Percentage fee increase applied for Year 2."
-                                  />
-                                </Typography>
-                                <Slider
-                                  value={feeIncreaseYear2}
-                                  onChange={(_, value) => setFeeIncreaseYear2(value as number)}
-                                  min={2}
-                                  max={6}
-                                  step={0.1}
-                                  marks
-                                  valueLabelDisplay="auto"
-                                />
-                              </Box>
-                              <Box>
-                                <Typography gutterBottom>
-                                  <LabelWithTooltip
-                                    label={`Year 3: ${feeIncreaseYear3}%`}
-                                    tooltip="Percentage fee increase applied for Year 3."
-                                  />
-                                </Typography>
-                                <Slider
-                                  value={feeIncreaseYear3}
-                                  onChange={(_, value) => setFeeIncreaseYear3(value as number)}
-                                  min={2}
-                                  max={6}
-                                  step={0.1}
-                                  marks
-                                  valueLabelDisplay="auto"
-                                />
-                              </Box>
-                            </>
-                          ) : (
-                            <Box>
-                              <Typography gutterBottom>
-                                <LabelWithTooltip
-                                  label={`Tuition Fee Increase: ${feeIncrease}%`}
-                                  tooltip="Single annual fee increase used when per-year fee increases are disabled."
-                                />
-                              </Typography>
-                              <Slider
-                                value={feeIncrease}
-                                onChange={(_, value) => setFeeIncrease(value as number)}
-                                min={2}
-                                max={6}
-                                step={0.1}
-                                marks
-                                valueLabelDisplay="auto"
-                              />
-                            </Box>
-                          )}
-
-                          <TextField
-                            label={<LabelWithTooltip label="Staff Children" tooltip="Number of staff children receiving a fixed 50% discount." />}
-                            type="number"
-                            value={numStaffChildren}
-                            onChange={(e) =>
-                              setNumStaffChildren(Math.max(0, Math.min(Number(e.target.value), currentStudentCount)))
-                            }
-                            fullWidth
-                            helperText="Staff children receive 50% discount"
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <School />
-                                </InputAdornment>
-                              ),
-                            }}
-                          />
-                          <Box>
-                            <Typography gutterBottom>
-                              <LabelWithTooltip
-                                label={`Other Children Discount: ${otherChildrenDiscount}%`}
-                                tooltip="Average discount rate applied to non-staff children."
-                              />
-                            </Typography>
-                            <Slider
-                              value={otherChildrenDiscount}
-                              onChange={(_, value) => setOtherChildrenDiscount(value as number)}
-                              min={0}
-                              max={20}
-                              step={0.5}
-                              marks
-                              valueLabelDisplay="auto"
+                            <NumberField
+                              label="Year 2 Fee per Term"
+                              tooltip="Fee charged per term in Year 2."
+                              icon={<PoundSterling />}
+                              value={feePerTermYear2}
+                              onChange={setFeePerTermYear2}
                             />
-                          </Box>
-                          <Box>
-                            <Typography gutterBottom>
-                              <LabelWithTooltip
-                                label={`Total Discount Effect (calculated): ${formatNumber(calculatedDiscountEffect)}%`}
-                                tooltip="Weighted average discount rate used in revenue calculations."
-                              />
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
-                              Based on staff children at 50% discount and other children discount.
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      </AccordionDetails>
-                    </Accordion>
+                            <NumberField
+                              label="Year 3 Fee per Term"
+                              tooltip="Fee charged per term in Year 3."
+                              icon={<PoundSterling />}
+                              value={feePerTermYear3}
+                              onChange={setFeePerTermYear3}
+                            />
+                          </>
+                        ) : (
+                          <NumberField
+                            label="Fee per Term"
+                            tooltip="Current base fee per term used to derive projected fees."
+                            icon={<PoundSterling />}
+                            value={feePerTerm}
+                            onChange={setFeePerTerm}
+                          />
+                        )}
 
-                    <Accordion defaultExpanded={false}>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <LabelWithTooltip
+                        <SwitchField
+                          label="Set fee increase per year"
+                          tooltip="Apply different annual fee growth rates for each projected year."
+                          checked={useFeeIncreaseByYear}
+                          onCheckedChange={setUseFeeIncreaseByYear}
+                        />
+                        {useFeeIncreaseByYear ? (
+                          <>
+                            <SliderField
+                              label="Year 1"
+                              tooltip="Percentage fee increase applied for Year 1."
+                              value={feeIncreaseYear1}
+                              onChange={setFeeIncreaseYear1}
+                              min={2}
+                              max={6}
+                              step={0.1}
+                            />
+                            <SliderField
+                              label="Year 2"
+                              tooltip="Percentage fee increase applied for Year 2."
+                              value={feeIncreaseYear2}
+                              onChange={setFeeIncreaseYear2}
+                              min={2}
+                              max={6}
+                              step={0.1}
+                            />
+                            <SliderField
+                              label="Year 3"
+                              tooltip="Percentage fee increase applied for Year 3."
+                              value={feeIncreaseYear3}
+                              onChange={setFeeIncreaseYear3}
+                              min={2}
+                              max={6}
+                              step={0.1}
+                            />
+                          </>
+                        ) : (
+                          <SliderField
+                            label="Tuition Fee Increase"
+                            tooltip="Single annual fee increase used when per-year fee increases are disabled."
+                            value={feeIncrease}
+                            onChange={setFeeIncrease}
+                            min={2}
+                            max={6}
+                            step={0.1}
+                          />
+                        )}
+
+                        <NumberField
+                          label="Staff Children"
+                          tooltip="Number of staff children receiving a fixed 50% discount."
+                          icon={<GraduationCap />}
+                          value={numStaffChildren}
+                          onChange={(value) =>
+                            setNumStaffChildren(Math.max(0, Math.min(value, currentStudentCount)))
+                          }
+                          helper="Staff children receive 50% discount"
+                        />
+                        <SliderField
+                          label="Other Children Discount"
+                          tooltip="Average discount rate applied to non-staff children."
+                          value={otherChildrenDiscount}
+                          onChange={setOtherChildrenDiscount}
+                          min={0}
+                          max={20}
+                          step={0.5}
+                        />
+                        <div className="rounded-lg border bg-muted/40 p-3">
+                          <p className="text-sm font-medium">
+                            <InfoLabel
+                              label={`Total Discount Effect (calculated): ${formatNumber(calculatedDiscountEffect)}%`}
+                              tooltip="Weighted average discount rate used in revenue calculations."
+                            />
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Based on staff children at 50% discount and other children discount.
+                          </p>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="staff">
+                      <AccordionTrigger>
+                        <InfoLabel
                           label="Staff Costs"
                           tooltip="Controls whether staffing costs are estimated by a percentage share or detailed salaries/headcount."
                         />
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Stack spacing={2}>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={useDetailedStaffCosts}
-                                onChange={(e) => setUseDetailedStaffCosts(e.target.checked)}
-                                color="primary"
-                              />
-                            }
-                            label={<LabelWithTooltip label="Use detailed staff costs" tooltip="Calculate staff costs from salaries and headcount instead of using a percentage share." />}
-                          />
-                          {useDetailedStaffCosts ? (
-                            <>
-                              <FormControlLabel
-                                control={
-                                  <Switch
-                                    checked={useStaffByYear}
-                                    onChange={(e) => setUseStaffByYear(e.target.checked)}
-                                    color="primary"
-                                  />
-                                }
-                                label={<LabelWithTooltip label="Set staff salaries & headcount per year" tooltip="Set separate salary and headcount assumptions for each projected year." />}
-                              />
-                              {useStaffByYear ? (
-                                <>
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 1 Teacher Salary" tooltip="Average annual teacher salary in Year 1." />}
-                                    type="number"
-                                    value={avgAnnualSalaryYear1}
-                                    onChange={(e) => setAvgAnnualSalaryYear1(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <CurrencyPound />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  {usePayIncreaseByYear && (
-                                    <Box>
-                                      <Typography gutterBottom>
-                                        <LabelWithTooltip
-                                          label={`Year 1 Pay Increase: ${payIncreaseYear1}%`}
-                                          tooltip="Salary growth rate used to derive Year 1 staff salaries."
-                                        />
-                                      </Typography>
-                                      <Slider
-                                        value={payIncreaseYear1}
-                                        onChange={(_, value) => applyYear1PayIncrease(value as number)}
-                                        min={0}
-                                        max={5}
-                                        step={0.1}
-                                        marks
-                                        valueLabelDisplay="auto"
-                                      />
-                                    </Box>
-                                  )}
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 1 Teachers" tooltip="Number of teachers in Year 1." />}
-                                    type="number"
-                                    value={numTeachersYear1}
-                                    onChange={(e) => setNumTeachersYear1(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <People />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 1 Support Salary" tooltip="Average annual support-staff salary in Year 1." />}
-                                    type="number"
-                                    value={avgSupportSalaryYear1}
-                                    onChange={(e) => setAvgSupportSalaryYear1(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <CurrencyPound />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 1 Support Staff" tooltip="Number of support staff in Year 1." />}
-                                    type="number"
-                                    value={numSupportYear1}
-                                    onChange={(e) => setNumSupportYear1(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <People />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 2 Teacher Salary" tooltip="Average annual teacher salary in Year 2." />}
-                                    type="number"
-                                    value={avgAnnualSalaryYear2}
-                                    onChange={(e) => setAvgAnnualSalaryYear2(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <CurrencyPound />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  {usePayIncreaseByYear && (
-                                    <Box>
-                                      <Typography gutterBottom>
-                                        <LabelWithTooltip
-                                          label={`Year 2 Pay Increase: ${payIncreaseYear2}%`}
-                                          tooltip="Salary growth rate used to derive Year 2 staff salaries."
-                                        />
-                                      </Typography>
-                                      <Slider
-                                        value={payIncreaseYear2}
-                                        onChange={(_, value) => applyYear2PayIncrease(value as number)}
-                                        min={0}
-                                        max={5}
-                                        step={0.1}
-                                        marks
-                                        valueLabelDisplay="auto"
-                                      />
-                                    </Box>
-                                  )}
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 2 Teachers" tooltip="Number of teachers in Year 2." />}
-                                    type="number"
-                                    value={numTeachersYear2}
-                                    onChange={(e) => setNumTeachersYear2(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <People />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 2 Support Salary" tooltip="Average annual support-staff salary in Year 2." />}
-                                    type="number"
-                                    value={avgSupportSalaryYear2}
-                                    onChange={(e) => setAvgSupportSalaryYear2(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <CurrencyPound />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 2 Support Staff" tooltip="Number of support staff in Year 2." />}
-                                    type="number"
-                                    value={numSupportYear2}
-                                    onChange={(e) => setNumSupportYear2(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <People />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 3 Teacher Salary" tooltip="Average annual teacher salary in Year 3." />}
-                                    type="number"
-                                    value={avgAnnualSalaryYear3}
-                                    onChange={(e) => setAvgAnnualSalaryYear3(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <CurrencyPound />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  {usePayIncreaseByYear && (
-                                    <Box>
-                                      <Typography gutterBottom>
-                                        <LabelWithTooltip
-                                          label={`Year 3 Pay Increase: ${payIncreaseYear3}%`}
-                                          tooltip="Salary growth rate used to derive Year 3 staff salaries."
-                                        />
-                                      </Typography>
-                                      <Slider
-                                        value={payIncreaseYear3}
-                                        onChange={(_, value) => applyYear3PayIncrease(value as number)}
-                                        min={0}
-                                        max={5}
-                                        step={0.1}
-                                        marks
-                                        valueLabelDisplay="auto"
-                                      />
-                                    </Box>
-                                  )}
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 3 Teachers" tooltip="Number of teachers in Year 3." />}
-                                    type="number"
-                                    value={numTeachersYear3}
-                                    onChange={(e) => setNumTeachersYear3(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <People />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 3 Support Salary" tooltip="Average annual support-staff salary in Year 3." />}
-                                    type="number"
-                                    value={avgSupportSalaryYear3}
-                                    onChange={(e) => setAvgSupportSalaryYear3(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <CurrencyPound />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  <TextField
-                                    label={<LabelWithTooltip label="Year 3 Support Staff" tooltip="Number of support staff in Year 3." />}
-                                    type="number"
-                                    value={numSupportYear3}
-                                    onChange={(e) => setNumSupportYear3(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <People />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                </>
-                              ) : (
-                                <>
-                                  <TextField
-                                    label={<LabelWithTooltip label="Average Teacher Salary" tooltip="Average annual teacher salary used across all years." />}
-                                    type="number"
-                                    value={avgAnnualSalary}
-                                    onChange={(e) => setAvgAnnualSalary(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <CurrencyPound />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  <TextField
-                                    label={<LabelWithTooltip label="Number of Teachers" tooltip="Teacher headcount used across all years." />}
-                                    type="number"
-                                    value={numTeachers}
-                                    onChange={(e) => setNumTeachers(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <People />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  <TextField
-                                    label={<LabelWithTooltip label="Average Support Salary" tooltip="Average annual support-staff salary used across all years." />}
-                                    type="number"
-                                    value={avgSupportSalary}
-                                    onChange={(e) => setAvgSupportSalary(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <CurrencyPound />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                  <TextField
-                                    label={<LabelWithTooltip label="Number of Support Staff" tooltip="Support-staff headcount used across all years." />}
-                                    type="number"
-                                    value={numSupportStaff}
-                                    onChange={(e) => setNumSupportStaff(Number(e.target.value))}
-                                    fullWidth
-                                    InputProps={{
-                                      startAdornment: (
-                                        <InputAdornment position="start">
-                                          <People />
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                  />
-                                </>
-                              )}
-                            </>
-                          ) : (
-                            <Box>
-                              <Typography gutterBottom>
-                                <LabelWithTooltip
-                                  label={`Staff Cost Share: ${formatNumber(staffCostShare)}%`}
-                                  tooltip="Percentage of total costs attributed to staff costs when detailed mode is disabled."
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-3">
+                        <SwitchField
+                          label="Use detailed staff costs"
+                          tooltip="Calculate staff costs from salaries and headcount instead of using a percentage share."
+                          checked={useDetailedStaffCosts}
+                          onCheckedChange={setUseDetailedStaffCosts}
+                        />
+                        {useDetailedStaffCosts ? (
+                          <>
+                            <SwitchField
+                              label="Set staff salaries & headcount per year"
+                              tooltip="Set separate salary and headcount assumptions for each projected year."
+                              checked={useStaffByYear}
+                              onCheckedChange={setUseStaffByYear}
+                            />
+                            {useStaffByYear ? (
+                              <>
+                                <NumberField
+                                  label="Year 1 Teacher Salary"
+                                  tooltip="Average annual teacher salary in Year 1."
+                                  icon={<PoundSterling />}
+                                  value={avgAnnualSalaryYear1}
+                                  onChange={setAvgAnnualSalaryYear1}
                                 />
-                              </Typography>
-                              <Slider
-                                value={staffCostShare}
-                                onChange={(_, value) => setStaffCostShare(value as number)}
-                                min={50}
-                                max={90}
-                                step={1}
-                                marks
-                                valueLabelDisplay="auto"
-                              />
-                            </Box>
-                          )}
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={usePayIncreaseByYear}
-                                onChange={(e) => handleUsePayIncreaseByYearChange(e.target.checked)}
-                                color="primary"
-                              />
-                            }
-                            label={<LabelWithTooltip label="Set pay increase per year" tooltip="Apply different staff pay growth rates for each projected year." />}
-                          />
-                          {usePayIncreaseByYear ? (
-                            <>
-                              {!useStaffByYear && (
-                                <>
-                                  <Box>
-                                    <Typography gutterBottom>
-                                      <LabelWithTooltip
-                                        label={`Year 1: ${payIncreaseYear1}%`}
-                                        tooltip="Pay increase applied to staff costs in Year 1."
-                                      />
-                                    </Typography>
-                                    <Slider
-                                      value={payIncreaseYear1}
-                                      onChange={(_, value) => setPayIncreaseYear1(value as number)}
-                                      min={0}
-                                      max={5}
-                                      step={0.1}
-                                      marks
-                                      valueLabelDisplay="auto"
-                                    />
-                                  </Box>
-                                  <Box>
-                                    <Typography gutterBottom>
-                                      <LabelWithTooltip
-                                        label={`Year 2: ${payIncreaseYear2}%`}
-                                        tooltip="Pay increase applied to staff costs in Year 2."
-                                      />
-                                    </Typography>
-                                    <Slider
-                                      value={payIncreaseYear2}
-                                      onChange={(_, value) => setPayIncreaseYear2(value as number)}
-                                      min={0}
-                                      max={5}
-                                      step={0.1}
-                                      marks
-                                      valueLabelDisplay="auto"
-                                    />
-                                  </Box>
-                                  <Box>
-                                    <Typography gutterBottom>
-                                      <LabelWithTooltip
-                                        label={`Year 3: ${payIncreaseYear3}%`}
-                                        tooltip="Pay increase applied to staff costs in Year 3."
-                                      />
-                                    </Typography>
-                                    <Slider
-                                      value={payIncreaseYear3}
-                                      onChange={(_, value) => setPayIncreaseYear3(value as number)}
-                                      min={0}
-                                      max={5}
-                                      step={0.1}
-                                      marks
-                                      valueLabelDisplay="auto"
-                                    />
-                                  </Box>
-                                </>
-                              )}
-                            </>
-                          ) : (
-                            <Box>
-                              <Typography gutterBottom>
-                                <LabelWithTooltip
-                                  label={`Staff Pay Increase: ${payIncrease}%`}
-                                  tooltip="Single annual pay increase used when per-year pay increases are disabled."
+                                {usePayIncreaseByYear && (
+                                  <SliderField
+                                    label="Year 1 Pay Increase"
+                                    tooltip="Salary growth rate used to derive Year 1 staff salaries."
+                                    value={payIncreaseYear1}
+                                    onChange={applyYear1PayIncrease}
+                                    min={0}
+                                    max={5}
+                                    step={0.1}
+                                  />
+                                )}
+                                <NumberField
+                                  label="Year 1 Teachers"
+                                  tooltip="Number of teachers in Year 1."
+                                  icon={<Users />}
+                                  value={numTeachersYear1}
+                                  onChange={setNumTeachersYear1}
                                 />
-                              </Typography>
-                              <Slider
-                                value={payIncrease}
-                                onChange={(_, value) => setPayIncrease(value as number)}
+                                <NumberField
+                                  label="Year 1 Support Salary"
+                                  tooltip="Average annual support-staff salary in Year 1."
+                                  icon={<PoundSterling />}
+                                  value={avgSupportSalaryYear1}
+                                  onChange={setAvgSupportSalaryYear1}
+                                />
+                                <NumberField
+                                  label="Year 1 Support Staff"
+                                  tooltip="Number of support staff in Year 1."
+                                  icon={<Users />}
+                                  value={numSupportYear1}
+                                  onChange={setNumSupportYear1}
+                                />
+
+                                <Separator />
+
+                                <NumberField
+                                  label="Year 2 Teacher Salary"
+                                  tooltip="Average annual teacher salary in Year 2."
+                                  icon={<PoundSterling />}
+                                  value={avgAnnualSalaryYear2}
+                                  onChange={setAvgAnnualSalaryYear2}
+                                />
+                                {usePayIncreaseByYear && (
+                                  <SliderField
+                                    label="Year 2 Pay Increase"
+                                    tooltip="Salary growth rate used to derive Year 2 staff salaries."
+                                    value={payIncreaseYear2}
+                                    onChange={applyYear2PayIncrease}
+                                    min={0}
+                                    max={5}
+                                    step={0.1}
+                                  />
+                                )}
+                                <NumberField
+                                  label="Year 2 Teachers"
+                                  tooltip="Number of teachers in Year 2."
+                                  icon={<Users />}
+                                  value={numTeachersYear2}
+                                  onChange={setNumTeachersYear2}
+                                />
+                                <NumberField
+                                  label="Year 2 Support Salary"
+                                  tooltip="Average annual support-staff salary in Year 2."
+                                  icon={<PoundSterling />}
+                                  value={avgSupportSalaryYear2}
+                                  onChange={setAvgSupportSalaryYear2}
+                                />
+                                <NumberField
+                                  label="Year 2 Support Staff"
+                                  tooltip="Number of support staff in Year 2."
+                                  icon={<Users />}
+                                  value={numSupportYear2}
+                                  onChange={setNumSupportYear2}
+                                />
+
+                                <Separator />
+
+                                <NumberField
+                                  label="Year 3 Teacher Salary"
+                                  tooltip="Average annual teacher salary in Year 3."
+                                  icon={<PoundSterling />}
+                                  value={avgAnnualSalaryYear3}
+                                  onChange={setAvgAnnualSalaryYear3}
+                                />
+                                {usePayIncreaseByYear && (
+                                  <SliderField
+                                    label="Year 3 Pay Increase"
+                                    tooltip="Salary growth rate used to derive Year 3 staff salaries."
+                                    value={payIncreaseYear3}
+                                    onChange={applyYear3PayIncrease}
+                                    min={0}
+                                    max={5}
+                                    step={0.1}
+                                  />
+                                )}
+                                <NumberField
+                                  label="Year 3 Teachers"
+                                  tooltip="Number of teachers in Year 3."
+                                  icon={<Users />}
+                                  value={numTeachersYear3}
+                                  onChange={setNumTeachersYear3}
+                                />
+                                <NumberField
+                                  label="Year 3 Support Salary"
+                                  tooltip="Average annual support-staff salary in Year 3."
+                                  icon={<PoundSterling />}
+                                  value={avgSupportSalaryYear3}
+                                  onChange={setAvgSupportSalaryYear3}
+                                />
+                                <NumberField
+                                  label="Year 3 Support Staff"
+                                  tooltip="Number of support staff in Year 3."
+                                  icon={<Users />}
+                                  value={numSupportYear3}
+                                  onChange={setNumSupportYear3}
+                                />
+                              </>
+                            ) : (
+                              <>
+                                <NumberField
+                                  label="Average Teacher Salary"
+                                  tooltip="Average annual teacher salary used across all years."
+                                  icon={<PoundSterling />}
+                                  value={avgAnnualSalary}
+                                  onChange={setAvgAnnualSalary}
+                                />
+                                <NumberField
+                                  label="Number of Teachers"
+                                  tooltip="Teacher headcount used across all years."
+                                  icon={<Users />}
+                                  value={numTeachers}
+                                  onChange={setNumTeachers}
+                                />
+                                <NumberField
+                                  label="Average Support Salary"
+                                  tooltip="Average annual support-staff salary used across all years."
+                                  icon={<PoundSterling />}
+                                  value={avgSupportSalary}
+                                  onChange={setAvgSupportSalary}
+                                />
+                                <NumberField
+                                  label="Number of Support Staff"
+                                  tooltip="Support-staff headcount used across all years."
+                                  icon={<Users />}
+                                  value={numSupportStaff}
+                                  onChange={setNumSupportStaff}
+                                />
+                              </>
+                            )}
+                          </>
+                        ) : (
+                          <SliderField
+                            label="Staff Cost Share"
+                            tooltip="Percentage of total costs attributed to staff costs when detailed mode is disabled."
+                            value={staffCostShare}
+                            onChange={setStaffCostShare}
+                            min={50}
+                            max={90}
+                            step={1}
+                          />
+                        )}
+
+                        <SwitchField
+                          label="Set pay increase per year"
+                          tooltip="Apply different staff pay growth rates for each projected year."
+                          checked={usePayIncreaseByYear}
+                          onCheckedChange={handleUsePayIncreaseByYearChange}
+                        />
+                        {usePayIncreaseByYear ? (
+                          !useStaffByYear && (
+                            <>
+                              <SliderField
+                                label="Year 1"
+                                tooltip="Pay increase applied to staff costs in Year 1."
+                                value={payIncreaseYear1}
+                                onChange={setPayIncreaseYear1}
                                 min={0}
                                 max={5}
                                 step={0.1}
-                                marks
-                                valueLabelDisplay="auto"
                               />
-                            </Box>
-                          )}
-                        </Stack>
-                      </AccordionDetails>
-                    </Accordion>
+                              <SliderField
+                                label="Year 2"
+                                tooltip="Pay increase applied to staff costs in Year 2."
+                                value={payIncreaseYear2}
+                                onChange={setPayIncreaseYear2}
+                                min={0}
+                                max={5}
+                                step={0.1}
+                              />
+                              <SliderField
+                                label="Year 3"
+                                tooltip="Pay increase applied to staff costs in Year 3."
+                                value={payIncreaseYear3}
+                                onChange={setPayIncreaseYear3}
+                                min={0}
+                                max={5}
+                                step={0.1}
+                              />
+                            </>
+                          )
+                        ) : (
+                          <SliderField
+                            label="Staff Pay Increase"
+                            tooltip="Single annual pay increase used when per-year pay increases are disabled."
+                            value={payIncrease}
+                            onChange={setPayIncrease}
+                            min={0}
+                            max={5}
+                            step={0.1}
+                          />
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
 
-                    <Accordion defaultExpanded={false}>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <LabelWithTooltip
+                    <AccordionItem value="inflation">
+                      <AccordionTrigger>
+                        <InfoLabel
                           label="Inflation"
                           tooltip="Annual non-staff cost growth assumptions for each projected year."
                         />
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Stack spacing={2}>
-                          <Box>
-                            <Typography gutterBottom>
-                              <LabelWithTooltip
-                                label={`Year 1: ${inflationYear1}%`}
-                                tooltip="Inflation rate applied to non-staff costs for Year 1."
-                              />
-                            </Typography>
-                            <Slider
-                              value={inflationYear1}
-                              onChange={(_, value) => setInflationYear1(value as number)}
-                              min={0}
-                              max={10}
-                              step={0.1}
-                              valueLabelDisplay="auto"
-                            />
-                          </Box>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-3">
+                        <SliderField
+                          label="Year 1"
+                          tooltip="Inflation rate applied to non-staff costs for Year 1."
+                          value={inflationYear1}
+                          onChange={setInflationYear1}
+                          min={0}
+                          max={10}
+                          step={0.1}
+                        />
+                        <SliderField
+                          label="Year 2"
+                          tooltip="Inflation rate applied to non-staff costs for Year 2."
+                          value={inflationYear2}
+                          onChange={setInflationYear2}
+                          min={0}
+                          max={10}
+                          step={0.1}
+                        />
+                        <SliderField
+                          label="Year 3"
+                          tooltip="Inflation rate applied to non-staff costs for Year 3."
+                          value={inflationYear3}
+                          onChange={setInflationYear3}
+                          min={0}
+                          max={10}
+                          step={0.1}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
 
-                          <Box>
-                            <Typography gutterBottom>
-                              <LabelWithTooltip
-                                label={`Year 2: ${inflationYear2}%`}
-                                tooltip="Inflation rate applied to non-staff costs for Year 2."
-                              />
-                            </Typography>
-                            <Slider
-                              value={inflationYear2}
-                              onChange={(_, value) => setInflationYear2(value as number)}
-                              min={0}
-                              max={10}
-                              step={0.1}
-                              valueLabelDisplay="auto"
-                            />
-                          </Box>
-
-                          <Box>
-                            <Typography gutterBottom>
-                              <LabelWithTooltip
-                                label={`Year 3: ${inflationYear3}%`}
-                                tooltip="Inflation rate applied to non-staff costs for Year 3."
-                              />
-                            </Typography>
-                            <Slider
-                              value={inflationYear3}
-                              onChange={(_, value) => setInflationYear3(value as number)}
-                              min={0}
-                              max={10}
-                              step={0.1}
-                              valueLabelDisplay="auto"
-                            />
-                          </Box>
-                        </Stack>
-                      </AccordionDetails>
-                    </Accordion>
-
-                    <Accordion defaultExpanded={false}>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <LabelWithTooltip
+                    <AccordionItem value="current-position">
+                      <AccordionTrigger>
+                        <InfoLabel
                           label="Current Position"
                           tooltip="Baseline financial position used as the starting point for projections."
                         />
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Stack spacing={2}>
-                          <Paper elevation={0} sx={{ p: 2, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
-                            <Typography variant="subtitle2" gutterBottom>
-                              Gross Annual Revenue
-                            </Typography>
-                            <Typography variant="h6">
-                              {formatCurrency(currentStudentCount * currentFeePerTerm * 3)}
-                            </Typography>
-                            <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
-                              Turnover: {formatCurrency(
-                                (currentStudentCount * currentFeePerTerm * 3) * (1 - calculatedDiscountEffect / 100)
-                              )}
-                            </Typography>
-                          </Paper>
-                          <TextField
-                            label={<LabelWithTooltip label="Current Annual Surplus" tooltip="Current yearly surplus amount (turnover minus costs) used as the baseline." />}
-                            type="number"
-                            value={currentSurplus}
-                            onChange={(e) => setCurrentSurplus(Number(e.target.value))}
-                            fullWidth
-                            helperText="Surplus = Turnover - Costs"
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <CurrencyPound />
-                                </InputAdornment>
-                              ),
-                            }}
-                          />
-                        </Stack>
-                      </AccordionDetails>
-                    </Accordion>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-3">
+                        <div className="rounded-lg bg-primary p-4 text-primary-foreground">
+                          <p className="text-xs font-medium uppercase tracking-wide opacity-90">
+                            Gross Annual Revenue
+                          </p>
+                          <p className="mt-1 text-xl font-semibold">
+                            {formatCurrency(currentStudentCount * currentFeePerTerm * 3)}
+                          </p>
+                          <p className="mt-1 text-sm opacity-90">
+                            Turnover:{' '}
+                            {formatCurrency(
+                              currentStudentCount * currentFeePerTerm * 3 * (1 - calculatedDiscountEffect / 100),
+                            )}
+                          </p>
+                        </div>
+                        <NumberField
+                          label="Current Annual Surplus"
+                          tooltip="Current yearly surplus amount (turnover minus costs) used as the baseline."
+                          icon={<PoundSterling />}
+                          value={currentSurplus}
+                          onChange={setCurrentSurplus}
+                          helper="Surplus = Turnover - Costs"
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
 
-                    <Accordion defaultExpanded={false}>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <LabelWithTooltip
+                    <AccordionItem value="export" className="border-b-0">
+                      <AccordionTrigger>
+                        <InfoLabel
                           label="Export"
                           tooltip="Options that control PDF and Excel outputs."
                         />
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Stack spacing={2}>
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={includeChartsInExport}
-                                onChange={(e) => setIncludeChartsInExport(e.target.checked)}
-                                color="primary"
-                              />
-                            }
-                            label={<LabelWithTooltip label="Include charts in PDF" tooltip="If enabled, chart images are added to the PDF export after the tables." />}
-                          />
-                          <Stack direction="row" spacing={1} flexWrap="wrap">
-                            <Button variant="outlined" onClick={handleExportPdf}>
-                              Export PDF
-                            </Button>
-                            <Button variant="outlined" onClick={handleExportExcel}>
-                              Export Excel
-                            </Button>
-                          </Stack>
-                        </Stack>
-                      </AccordionDetails>
-                    </Accordion>
-                  </Stack>
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-3">
+                        <SwitchField
+                          label="Include charts in PDF"
+                          tooltip="If enabled, chart images are added to the PDF export after the tables."
+                          checked={includeChartsInExport}
+                          onCheckedChange={setIncludeChartsInExport}
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <Button variant="outline" size="sm" onClick={handleExportPdf}>
+                            <FileDown className="h-4 w-4" />
+                            Export PDF
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={handleExportExcel}>
+                            <FileSpreadsheet className="h-4 w-4" />
+                            Export Excel
+                          </Button>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </CardContent>
               </Card>
-            </Grid>
+            </div>
 
             {/* Results Panel */}
-            <Grid item xs={12} md={8}>
-              <Stack spacing={3}>
-                {/* Summary Cards */}
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography color="textSecondary" gutterBottom variant="body2">
-                          Current Turnover
-                        </Typography>
-                        <Typography variant="h6">
-                          {formatCurrency(financialData[0].revenue)}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography color="textSecondary" gutterBottom variant="body2">
-                          Year 3 Turnover
-                        </Typography>
-                        <Typography variant="h6">
-                          {formatCurrency(financialData[3].revenue)}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography color="textSecondary" gutterBottom variant="body2">
-                          Year 3 Annual Surplus
-                        </Typography>
-                        <Typography
-                          variant="h6"
-                          color={financialData[3].annualSurplus >= 0 ? 'success.main' : 'error.main'}
-                        >
-                          {formatCurrency(financialData[3].annualSurplus)}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card>
-                      <CardContent>
-                        <Typography color="textSecondary" gutterBottom variant="body2">
-                          Year 3 Cumulative Surplus
-                        </Typography>
-                        <Typography
-                          variant="h6"
-                          color={financialData[3].netPosition >= 0 ? 'success.main' : 'error.main'}
-                        >
-                          {formatCurrency(financialData[3].netPosition)}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
+            <div className="space-y-6 lg:col-span-7 xl:col-span-8">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {summaryCards.map((card) => (
+                  <Card key={card.label}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between text-muted-foreground">
+                        <span className="text-xs font-medium">{card.label}</span>
+                        {card.icon}
+                      </div>
+                      <p className={cn('mt-2 text-2xl font-semibold tabular-nums', surplusToneClass(card.tone))}>
+                        {card.value}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-                <Card elevation={3}>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      Assumptions Snapshot
-                    </Typography>
-                    <Stack spacing={1}>
-                      <Typography variant="body2">
-                        <strong>Discount Effect:</strong> {formatNumber(calculatedDiscountEffect)}%
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Students:</strong>{' '}
-                        {useStudentsByYear
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Assumptions Snapshot</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <dl className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+                    {[
+                      ['Discount Effect', `${formatNumber(calculatedDiscountEffect)}%`],
+                      [
+                        'Students',
+                        useStudentsByYear
                           ? `Y1 ${formatNumber(numChildrenYear1)} / Y2 ${formatNumber(numChildrenYear2)} / Y3 ${formatNumber(numChildrenYear3)}`
-                          : formatNumber(numChildren)}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Fee per Term:</strong>{' '}
-                        {useFeePerTermByYear
+                          : formatNumber(numChildren),
+                      ],
+                      [
+                        'Fee per Term',
+                        useFeePerTermByYear
                           ? `Y1 £${formatNumber(feePerTermYear1)} / Y2 £${formatNumber(feePerTermYear2)} / Y3 £${formatNumber(feePerTermYear3)}`
-                          : `£${formatNumber(feePerTerm)}`}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Fee Increase:</strong>{' '}
-                        {useFeeIncreaseByYear
+                          : `£${formatNumber(feePerTerm)}`,
+                      ],
+                      [
+                        'Fee Increase',
+                        useFeeIncreaseByYear
                           ? `Y1 ${formatNumber(feeIncreaseYear1)}% / Y2 ${formatNumber(feeIncreaseYear2)}% / Y3 ${formatNumber(feeIncreaseYear3)}%`
-                          : `${formatNumber(feeIncrease)}%`}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Pay Increase:</strong>{' '}
-                        {usePayIncreaseByYear
+                          : `${formatNumber(feeIncrease)}%`,
+                      ],
+                      [
+                        'Pay Increase',
+                        usePayIncreaseByYear
                           ? `Y1 ${formatNumber(payIncreaseYear1)}% / Y2 ${formatNumber(payIncreaseYear2)}% / Y3 ${formatNumber(payIncreaseYear3)}%`
-                          : `${formatNumber(payIncrease)}%`}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Staff Costs:</strong>{' '}
-                        {useDetailedStaffCosts
+                          : `${formatNumber(payIncrease)}%`,
+                      ],
+                      [
+                        'Staff Costs',
+                        useDetailedStaffCosts
                           ? useStaffByYear
-                            ? `Detailed (per year salaries & headcount)`
-                            : `Detailed (salary × headcount)`
-                          : `Share ${formatNumber(staffCostShare)}%`}
-                      </Typography>
-                      <Typography variant="body2">
-                        <strong>Inflation:</strong>{' '}
-                        {`Y1 ${formatNumber(inflationYear1)}% / Y2 ${formatNumber(inflationYear2)}% / Y3 ${formatNumber(inflationYear3)}%`}
-                      </Typography>
-                    </Stack>
-                  </CardContent>
-                </Card>
+                            ? 'Detailed (per year salaries & headcount)'
+                            : 'Detailed (salary × headcount)'
+                          : `Share ${formatNumber(staffCostShare)}%`,
+                      ],
+                      [
+                        'Inflation',
+                        `Y1 ${formatNumber(inflationYear1)}% / Y2 ${formatNumber(inflationYear2)}% / Y3 ${formatNumber(inflationYear3)}%`,
+                      ],
+                    ].map(([term, value]) => (
+                      <div key={term} className="flex justify-between gap-4 border-b border-dashed py-1 text-sm last:border-0">
+                        <dt className="font-medium text-muted-foreground">{term}</dt>
+                        <dd className="text-right tabular-nums">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </CardContent>
+              </Card>
 
-                {/* Financial Table */}
-                <Card elevation={3}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Assessment sx={{ mr: 1, color: 'primary.main' }} />
-                    <Typography variant="h5" component="h2">
-                      Financial Projections
-                    </Typography>
-                  </Box>
-                    <TableContainer>
-                      <Table>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell><strong>Year</strong></TableCell>
-                            <TableCell align="right"><strong>Gross Revenue</strong></TableCell>
-                            <TableCell align="right"><strong>Discounts</strong></TableCell>
-                            <TableCell align="right"><strong>Turnover</strong></TableCell>
-                            <TableCell align="right"><strong>Costs</strong></TableCell>
-                            <TableCell align="right"><strong>Annual Surplus</strong></TableCell>
-                            <TableCell align="right"><strong>Cumulative Surplus</strong></TableCell>
-                            <TableCell align="center"><strong>Fee %</strong></TableCell>
-                            <TableCell align="center"><strong>Pay %</strong></TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {financialData.map((row, index) => (
-                            <TableRow key={index} hover>
-                              <TableCell><strong>{row.year}</strong></TableCell>
-                              <TableCell align="right">{formatCurrency(row.grossRevenue)}</TableCell>
-                              <TableCell align="right" sx={{ color: 'error.main' }}>
-                                {formatCurrency(-row.discountAmount)}
-                              </TableCell>
-                              <TableCell align="right">{formatCurrency(row.revenue)}</TableCell>
-                              <TableCell align="right">{formatCurrency(row.costs)}</TableCell>
-                              <TableCell
-                                align="right"
-                                sx={{
-                                  color: row.annualSurplus >= 0 ? 'success.main' : 'error.main',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {formatCurrency(row.annualSurplus)}
-                              </TableCell>
-                              <TableCell
-                                align="right"
-                                sx={{
-                                  color: row.netPosition >= 0 ? 'success.main' : 'error.main',
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {formatCurrency(row.netPosition)}
-                              </TableCell>
-                              <TableCell align="center">
-                                {row.feeIncrease > 0 ? (
-                                  <Chip label={`${row.feeIncrease}%`} size="small" color="primary" />
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
-                              <TableCell align="center">
-                                {row.payIncrease > 0 ? (
-                                  <Chip label={`${row.payIncrease}%`} size="small" color="secondary" />
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </CardContent>
-                </Card>
-
-                {/* Charts */}
-                <Stack spacing={2}>
-                  <Card elevation={3}>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        Turnover vs Costs Over Time
-                      </Typography>
-                      <Box ref={turnoverChartRef}>
-                        <ResponsiveContainer width="100%" height={300}>
-                          <LineChart data={financialData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
-                            <XAxis dataKey="year" tick={{ fill: chartAxisColor }} />
-                            <YAxis tick={{ fill: chartAxisColor }} tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
-                            <Tooltip
-                              formatter={(value) => formatTooltipValue(value)}
-                              contentStyle={chartTooltipContentStyle}
-                              labelStyle={chartTooltipLabelStyle}
-                              itemStyle={chartTooltipItemStyle}
-                            />
-                            <Legend />
-                            <Line
-                              type="monotone"
-                              dataKey="revenue"
-                              stroke="#2e7d32"
-                              strokeWidth={2}
-                              name="Turnover"
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="costs"
-                              stroke="#d32f2f"
-                              strokeWidth={2}
-                              name="Costs"
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </Box>
-                    </CardContent>
-                  </Card>
-
-                  <Card elevation={3}>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        Surplus Over Time (Annual vs Cumulative)
-                      </Typography>
-                      <Box ref={surplusChartRef}>
-                        <ResponsiveContainer width="100%" height={250}>
-                          <BarChart data={financialData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
-                            <XAxis dataKey="year" tick={{ fill: chartAxisColor }} />
-                            <YAxis tick={{ fill: chartAxisColor }} tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
-                            <Tooltip
-                              formatter={(value) => formatTooltipValue(value)}
-                              contentStyle={chartTooltipContentStyle}
-                              labelStyle={chartTooltipLabelStyle}
-                              itemStyle={chartTooltipItemStyle}
-                            />
-                            <Legend />
-                            <Bar dataKey="annualSurplus" name="Annual Surplus" fill="#1976d2" />
-                            <Bar dataKey="netPosition" name="Cumulative Surplus" fill="#9c27b0" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </Box>
-                    </CardContent>
-                  </Card>
-
-                  <Card elevation={3}>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        Revenue Breakdown
-                      </Typography>
-                      <Box ref={breakdownChartRef}>
-                        <ResponsiveContainer width="100%" height={250}>
-                          <BarChart data={financialData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
-                            <XAxis dataKey="year" tick={{ fill: chartAxisColor }} />
-                            <YAxis tick={{ fill: chartAxisColor }} tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
-                            <Tooltip
-                              formatter={(value) => formatTooltipValue(value)}
-                              contentStyle={chartTooltipContentStyle}
-                              labelStyle={chartTooltipLabelStyle}
-                              itemStyle={chartTooltipItemStyle}
-                            />
-                            <Legend />
-                            <Bar dataKey="revenue" fill="#2e7d32" name="Turnover" />
-                            <Bar dataKey="costs" fill="#d32f2f" name="Costs" />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Stack>
-
-                {/* Manual Calculations */}
-                <Accordion defaultExpanded>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Calculate sx={{ mr: 1, color: 'primary.main' }} />
-                      <Typography variant="h5" component="h2">
-                        Manual Calculations
-                      </Typography>
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Paper elevation={0} sx={{ p: 2, mb: 3, bgcolor: 'action.hover' }}>
-                      <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600 }}>
-                        Base Calculations
-                      </Typography>
-                      <Stack spacing={1}>
-                        <Typography variant="body2">
-                          <strong>Gross Annual Revenue:</strong> {formatNumber(currentStudentCount)} × £{formatNumber(currentFeePerTerm)} × 3 ={' '}
-                          {formatCurrency(baseCalculations.grossAnnualRevenue)}
-                        </Typography>
-                        <Typography variant="body2">
-                          <strong>Discount Amount:</strong> {formatCurrency(baseCalculations.grossAnnualRevenue)} ×{' '}
-                          {formatNumber(calculatedDiscountEffect)}% = {formatCurrency(baseCalculations.discountAmount)}
-                        </Typography>
-                        <Typography variant="body2">
-                          <strong>Current Turnover:</strong> {formatCurrency(baseCalculations.grossAnnualRevenue)} -{' '}
-                          {formatCurrency(baseCalculations.discountAmount)} ={' '}
-                          {formatCurrency(baseCalculations.currentAnnualRevenue)}
-                        </Typography>
-                        <Typography variant="body2">
-                          <strong>Current Costs:</strong> {formatCurrency(baseCalculations.currentAnnualRevenue)} -{' '}
-                          {formatCurrency(currentSurplus)} = {formatCurrency(baseCalculations.currentAnnualCosts)}
-                        </Typography>
-                        {useDetailedStaffCosts ? (
-                          <>
-                            <Typography variant="body2">
-                              <strong>Staff Costs:</strong> ({formatNumber(currentTeacherCount)} ×{' '}
-                              {formatCurrency(currentTeacherSalary)}) + ({formatNumber(currentSupportCount)} ×{' '}
-                              {formatCurrency(currentSupportSalary)}) = {formatCurrency(baseCalculations.staffCosts)}
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Non-Staff Costs:</strong> {formatCurrency(baseCalculations.currentAnnualCosts)} -{' '}
-                              {formatCurrency(baseCalculations.staffCosts)} ={' '}
-                              {formatCurrency(baseCalculations.nonStaffCosts)}
-                            </Typography>
-                          </>
-                        ) : (
-                          <>
-                            <Typography variant="body2">
-                              <strong>Staff Costs:</strong> {formatCurrency(baseCalculations.currentAnnualCosts)} ×{' '}
-                              {formatNumber(staffCostShare)}% = {formatCurrency(baseCalculations.staffCosts)}
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Non-Staff Costs:</strong> {formatCurrency(baseCalculations.currentAnnualCosts)} ×{' '}
-                              {formatNumber(100 - staffCostShare)}% ={' '}
-                              {formatCurrency(baseCalculations.nonStaffCosts)}
-                            </Typography>
-                          </>
-                        )}
-                      </Stack>
-                    </Paper>
-
-                    {financialData.slice(1).map((year, index) => {
-                      const yearNum = index + 1
-                      const studentsForYear = childrenByYear[index]
-                      const feePerTermForYear = projectedFeePerTermByYear[index]
-                      const previousFeePerTermForYear = index === 0
-                        ? currentFeePerTerm
-                        : projectedFeePerTermByYear[index - 1]
-                      const feeIncreaseForYear = previousFeePerTermForYear > 0
-                        ? ((feePerTermForYear - previousFeePerTermForYear) / previousFeePerTermForYear) * 100
-                        : 0
-                      const payIncreaseForYear = payIncreaseByYear[index]
-                      const inflationRate = inflationByYear[index]
-                      const previousYear = financialData[index]
-                      const usesDetailedInputsForStaff = useDetailedStaffCosts && useStaffByYear
-                      const detailedStaffCostsForYear =
-                        (teacherSalaryByYear[index] * teachersByYear[index]) +
-                        (supportSalaryByYear[index] * supportByYear[index])
-                      const staffCostsAfterPay = usesDetailedInputsForStaff
-                        ? detailedStaffCostsForYear
-                        : previousYear.staffCosts * (1 + payIncreaseForYear / 100)
-                      const nonStaffCostsAfterInflation = previousYear.nonStaffCosts * (1 + inflationRate / 100)
-                      const combinedCosts = staffCostsAfterPay + nonStaffCostsAfterInflation
-
-                      return (
-                        <Paper key={yearNum} elevation={1} sx={{ p: 2, mb: 2 }}>
-                          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-                            Year {yearNum} Calculations
-                          </Typography>
-                          <Stack spacing={1.5}>
-                            <Typography variant="body2">
-                              <strong>Step 1:</strong> Gross Revenue = {formatNumber(studentsForYear)} ×{' '}
-                              £{formatNumber(feePerTermForYear)} × 3 = {formatCurrency(year.grossRevenue)}
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Step 2:</strong> Fee Change = £{formatNumber(previousFeePerTermForYear)} →{' '}
-                              £{formatNumber(feePerTermForYear)} ({formatNumber(feeIncreaseForYear)}%)
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Step 3:</strong> Discount = {formatCurrency(year.grossRevenue)} ×{' '}
-                              {formatNumber(calculatedDiscountEffect)}% = {formatCurrency(year.discountAmount)}
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Step 4:</strong> Turnover = {formatCurrency(year.grossRevenue)} -{' '}
-                              {formatCurrency(year.discountAmount)} = {formatCurrency(year.revenue)}
-                            </Typography>
-                            {usesDetailedInputsForStaff ? (
-                              <Typography variant="body2">
-                                <strong>Step 5:</strong> Staff Costs = ({formatNumber(teachersByYear[index])} ×{' '}
-                                {formatCurrency(teacherSalaryByYear[index])}) + ({formatNumber(supportByYear[index])} ×{' '}
-                                {formatCurrency(supportSalaryByYear[index])}) = {formatCurrency(staffCostsAfterPay)}
-                              </Typography>
-                            ) : (
-                              <Typography variant="body2">
-                                <strong>Step 5:</strong> Staff Costs = {formatCurrency(previousYear.staffCosts)} × (1 +{' '}
-                                {formatNumber(payIncreaseForYear)}%) = {formatCurrency(staffCostsAfterPay)}
-                              </Typography>
+              {/* Financial Table */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <BarChart3 className="h-5 w-5 text-primary" />
+                    Financial Projections
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Year</TableHead>
+                        <TableHead className="text-right">Gross Revenue</TableHead>
+                        <TableHead className="text-right">Discounts</TableHead>
+                        <TableHead className="text-right">Turnover</TableHead>
+                        <TableHead className="text-right">Costs</TableHead>
+                        <TableHead className="text-right">Annual Surplus</TableHead>
+                        <TableHead className="text-right">Cumulative Surplus</TableHead>
+                        <TableHead className="text-center">Fee %</TableHead>
+                        <TableHead className="text-center">Pay %</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {financialData.map((row, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-semibold">{row.year}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatCurrency(row.grossRevenue)}</TableCell>
+                          <TableCell className="text-right tabular-nums text-destructive">
+                            {formatCurrency(-row.discountAmount)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{formatCurrency(row.revenue)}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatCurrency(row.costs)}</TableCell>
+                          <TableCell
+                            className={cn(
+                              'text-right font-semibold tabular-nums',
+                              row.annualSurplus >= 0 ? 'text-success' : 'text-destructive',
                             )}
-                            <Typography variant="body2">
-                              <strong>Step 6:</strong> Non-Staff Costs = {formatCurrency(previousYear.nonStaffCosts)} ×{' '}
-                              (1 + {inflationRate}%) = {formatCurrency(nonStaffCostsAfterInflation)}
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Step 7:</strong> Total Costs = {formatCurrency(staffCostsAfterPay)} +{' '}
-                              {formatCurrency(nonStaffCostsAfterInflation)} = {formatCurrency(combinedCosts)}
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Step 8:</strong> Annual Surplus = {formatCurrency(year.revenue)} -{' '}
-                              {formatCurrency(year.costs)} = {formatCurrency(year.annualSurplus)}
-                            </Typography>
-                            <Typography variant="body2">
-                              <strong>Step 9:</strong> Cumulative Surplus = Previous Surplus + Annual Surplus ={' '}
-                              {formatCurrency(previousYear.netPosition)} + {formatCurrency(year.annualSurplus)} ={' '}
-                              {formatCurrency(year.netPosition)}
-                            </Typography>
-                          </Stack>
-                        </Paper>
-                      )
-                    })}
-                  </AccordionDetails>
-                </Accordion>
-              </Stack>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
-    </ThemeProvider>
+                          >
+                            {formatCurrency(row.annualSurplus)}
+                          </TableCell>
+                          <TableCell
+                            className={cn(
+                              'text-right font-semibold tabular-nums',
+                              row.netPosition >= 0 ? 'text-success' : 'text-destructive',
+                            )}
+                          >
+                            {formatCurrency(row.netPosition)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {row.feeIncrease > 0 ? (
+                              <Badge>{row.feeIncrease}%</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {row.payIncrease > 0 ? (
+                              <Badge variant="secondary">{row.payIncrease}%</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Charts */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Turnover vs Costs Over Time</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div ref={turnoverChartRef}>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={financialData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                        <XAxis dataKey="year" tick={{ fill: chartAxisColor }} />
+                        <YAxis tick={{ fill: chartAxisColor }} tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
+                        <RechartsTooltip
+                          formatter={(value) => formatTooltipValue(value)}
+                          contentStyle={chartTooltipContentStyle}
+                          labelStyle={chartTooltipLabelStyle}
+                          itemStyle={chartTooltipItemStyle}
+                        />
+                        <Legend />
+                        <Line type="monotone" dataKey="revenue" stroke="#16a34a" strokeWidth={2} name="Turnover" />
+                        <Line type="monotone" dataKey="costs" stroke="#dc2626" strokeWidth={2} name="Costs" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Surplus Over Time (Annual vs Cumulative)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div ref={surplusChartRef}>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={financialData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                        <XAxis dataKey="year" tick={{ fill: chartAxisColor }} />
+                        <YAxis tick={{ fill: chartAxisColor }} tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
+                        <RechartsTooltip
+                          formatter={(value) => formatTooltipValue(value)}
+                          contentStyle={chartTooltipContentStyle}
+                          labelStyle={chartTooltipLabelStyle}
+                          itemStyle={chartTooltipItemStyle}
+                        />
+                        <Legend />
+                        <Bar dataKey="annualSurplus" name="Annual Surplus" fill="#2563eb" />
+                        <Bar dataKey="netPosition" name="Cumulative Surplus" fill="#9333ea" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Revenue Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div ref={breakdownChartRef}>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={financialData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                        <XAxis dataKey="year" tick={{ fill: chartAxisColor }} />
+                        <YAxis tick={{ fill: chartAxisColor }} tickFormatter={(value) => `£${(value / 1000).toFixed(0)}k`} />
+                        <RechartsTooltip
+                          formatter={(value) => formatTooltipValue(value)}
+                          contentStyle={chartTooltipContentStyle}
+                          labelStyle={chartTooltipLabelStyle}
+                          itemStyle={chartTooltipItemStyle}
+                        />
+                        <Legend />
+                        <Bar dataKey="revenue" fill="#16a34a" name="Turnover" />
+                        <Bar dataKey="costs" fill="#dc2626" name="Costs" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Manual Calculations */}
+              <Card>
+                <CardContent className="pt-6">
+                  <Accordion type="single" collapsible defaultValue="manual">
+                    <AccordionItem value="manual" className="border-b-0">
+                      <AccordionTrigger className="py-0">
+                        <span className="flex items-center gap-2 text-lg font-semibold">
+                          <Calculator className="h-5 w-5 text-primary" />
+                          Manual Calculations
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-4">
+                        <div className="mb-4 rounded-lg bg-muted/60 p-4">
+                          <p className="mb-2 font-semibold">Base Calculations</p>
+                          <div className="space-y-1 text-sm">
+                            <p>
+                              <strong>Gross Annual Revenue:</strong> {formatNumber(currentStudentCount)} × £
+                              {formatNumber(currentFeePerTerm)} × 3 = {formatCurrency(baseCalculations.grossAnnualRevenue)}
+                            </p>
+                            <p>
+                              <strong>Discount Amount:</strong> {formatCurrency(baseCalculations.grossAnnualRevenue)} ×{' '}
+                              {formatNumber(calculatedDiscountEffect)}% = {formatCurrency(baseCalculations.discountAmount)}
+                            </p>
+                            <p>
+                              <strong>Current Turnover:</strong> {formatCurrency(baseCalculations.grossAnnualRevenue)} -{' '}
+                              {formatCurrency(baseCalculations.discountAmount)} ={' '}
+                              {formatCurrency(baseCalculations.currentAnnualRevenue)}
+                            </p>
+                            <p>
+                              <strong>Current Costs:</strong> {formatCurrency(baseCalculations.currentAnnualRevenue)} -{' '}
+                              {formatCurrency(currentSurplus)} = {formatCurrency(baseCalculations.currentAnnualCosts)}
+                            </p>
+                            {useDetailedStaffCosts ? (
+                              <>
+                                <p>
+                                  <strong>Staff Costs:</strong> ({formatNumber(currentTeacherCount)} ×{' '}
+                                  {formatCurrency(currentTeacherSalary)}) + ({formatNumber(currentSupportCount)} ×{' '}
+                                  {formatCurrency(currentSupportSalary)}) = {formatCurrency(baseCalculations.staffCosts)}
+                                </p>
+                                <p>
+                                  <strong>Non-Staff Costs:</strong> {formatCurrency(baseCalculations.currentAnnualCosts)} -{' '}
+                                  {formatCurrency(baseCalculations.staffCosts)} ={' '}
+                                  {formatCurrency(baseCalculations.nonStaffCosts)}
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p>
+                                  <strong>Staff Costs:</strong> {formatCurrency(baseCalculations.currentAnnualCosts)} ×{' '}
+                                  {formatNumber(staffCostShare)}% = {formatCurrency(baseCalculations.staffCosts)}
+                                </p>
+                                <p>
+                                  <strong>Non-Staff Costs:</strong> {formatCurrency(baseCalculations.currentAnnualCosts)} ×{' '}
+                                  {formatNumber(100 - staffCostShare)}% = {formatCurrency(baseCalculations.nonStaffCosts)}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {financialData.slice(1).map((year, index) => {
+                          const yearNum = index + 1
+                          const studentsForYear = childrenByYear[index]
+                          const feePerTermForYear = projectedFeePerTermByYear[index]
+                          const previousFeePerTermForYear = index === 0
+                            ? currentFeePerTerm
+                            : projectedFeePerTermByYear[index - 1]
+                          const feeIncreaseForYear = previousFeePerTermForYear > 0
+                            ? ((feePerTermForYear - previousFeePerTermForYear) / previousFeePerTermForYear) * 100
+                            : 0
+                          const payIncreaseForYear = payIncreaseByYear[index]
+                          const inflationRate = inflationByYear[index]
+                          const previousYear = financialData[index]
+                          const usesDetailedInputsForStaff = useDetailedStaffCosts && useStaffByYear
+                          const detailedStaffCostsForYear =
+                            (teacherSalaryByYear[index] * teachersByYear[index]) +
+                            (supportSalaryByYear[index] * supportByYear[index])
+                          const staffCostsAfterPay = usesDetailedInputsForStaff
+                            ? detailedStaffCostsForYear
+                            : previousYear.staffCosts * (1 + payIncreaseForYear / 100)
+                          const nonStaffCostsAfterInflation = previousYear.nonStaffCosts * (1 + inflationRate / 100)
+                          const combinedCosts = staffCostsAfterPay + nonStaffCostsAfterInflation
+
+                          return (
+                            <div key={yearNum} className="mb-3 rounded-lg border p-4">
+                              <p className="mb-2 font-semibold text-primary">Year {yearNum} Calculations</p>
+                              <div className="space-y-1.5 text-sm">
+                                <p>
+                                  <strong>Step 1:</strong> Gross Revenue = {formatNumber(studentsForYear)} × £
+                                  {formatNumber(feePerTermForYear)} × 3 = {formatCurrency(year.grossRevenue)}
+                                </p>
+                                <p>
+                                  <strong>Step 2:</strong> Fee Change = £{formatNumber(previousFeePerTermForYear)} → £
+                                  {formatNumber(feePerTermForYear)} ({formatNumber(feeIncreaseForYear)}%)
+                                </p>
+                                <p>
+                                  <strong>Step 3:</strong> Discount = {formatCurrency(year.grossRevenue)} ×{' '}
+                                  {formatNumber(calculatedDiscountEffect)}% = {formatCurrency(year.discountAmount)}
+                                </p>
+                                <p>
+                                  <strong>Step 4:</strong> Turnover = {formatCurrency(year.grossRevenue)} -{' '}
+                                  {formatCurrency(year.discountAmount)} = {formatCurrency(year.revenue)}
+                                </p>
+                                {usesDetailedInputsForStaff ? (
+                                  <p>
+                                    <strong>Step 5:</strong> Staff Costs = ({formatNumber(teachersByYear[index])} ×{' '}
+                                    {formatCurrency(teacherSalaryByYear[index])}) + ({formatNumber(supportByYear[index])} ×{' '}
+                                    {formatCurrency(supportSalaryByYear[index])}) = {formatCurrency(staffCostsAfterPay)}
+                                  </p>
+                                ) : (
+                                  <p>
+                                    <strong>Step 5:</strong> Staff Costs = {formatCurrency(previousYear.staffCosts)} × (1 +{' '}
+                                    {formatNumber(payIncreaseForYear)}%) = {formatCurrency(staffCostsAfterPay)}
+                                  </p>
+                                )}
+                                <p>
+                                  <strong>Step 6:</strong> Non-Staff Costs = {formatCurrency(previousYear.nonStaffCosts)} ×{' '}
+                                  (1 + {inflationRate}%) = {formatCurrency(nonStaffCostsAfterInflation)}
+                                </p>
+                                <p>
+                                  <strong>Step 7:</strong> Total Costs = {formatCurrency(staffCostsAfterPay)} +{' '}
+                                  {formatCurrency(nonStaffCostsAfterInflation)} = {formatCurrency(combinedCosts)}
+                                </p>
+                                <p>
+                                  <strong>Step 8:</strong> Annual Surplus = {formatCurrency(year.revenue)} -{' '}
+                                  {formatCurrency(year.costs)} = {formatCurrency(year.annualSurplus)}
+                                </p>
+                                <p>
+                                  <strong>Step 9:</strong> Cumulative Surplus = Previous Surplus + Annual Surplus ={' '}
+                                  {formatCurrency(previousYear.netPosition)} + {formatCurrency(year.annualSurplus)} ={' '}
+                                  {formatCurrency(year.netPosition)}
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </main>
+      </div>
+    </TooltipProvider>
   )
 }
 
